@@ -1,2 +1,2 @@
 # DeepLearningProject
-c'est un test
+Project for the deep learning course, ULiège 2019. The goal is to take part to the [2018 kaggle data science bowl](https://www.kaggle.com/c/data-science-bowl-2018/data), see DL__project_proposal.pdf for more details.
