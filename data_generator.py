@@ -1,11 +1,7 @@
 import tensorflow as tf
-
 from tensorflow.keras.utils import Sequence
 
 from pathlib import Path
-
-import cv2
-
 import numpy as np
 
 
@@ -20,7 +16,7 @@ class DataGenerator(Sequence):
         self.output_masks = output_masks
 
         if ids_list is None:
-            ids_list = [dir.name for dir in self.data_directory.iterdir() if dir.is_dir()]
+            ids_list = [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
 
         self.ids_list = np.array(ids_list)
         self.indexes = np.arange(len(self.ids_list))
@@ -38,28 +34,28 @@ class DataGenerator(Sequence):
         """ return a batch """
         indexes = self.indexes[item*self.batch_size:(item+1)*self.batch_size]
 
-        ids_list_tmp = self.ids_list[indexes]
+        ids_list_subset = self.ids_list[indexes]
 
-        return self.__data_generation(ids_list_tmp)
+        return self.__data_generation(ids_list_subset)
 
-    def __data_generation(self, ids_list_tmp):
+    def __data_generation(self, ids_list_subset):
         """ take a list of ids of images and return the corresponding batch to feed the network """
         # get the images from the files
         images_paths = (self.data_directory / image_id / "images" / image_id
-                        for image_id in ids_list_tmp)
-        images_tensors = (tf.io.read_file(str(image_input_path), name=image_input_path.name)
+                        for image_id in ids_list_subset)
+        images_tensors = (tf.io.read_file(str(image_input_path), name=image_input_path.name)  # TODO: il manque pas un .png?
                           for image_input_path in images_paths)
 
         images = (tf.image.decode_png(image_tensor, channels=self.n_channels)
                   for image_tensor in images_tensors)
 
-        images = (tf.image.resize_images(image, self.resolution[:2])
+        images = (tf.image.resize_images(image, self.resolution[:2])  # TODO: à terme il faudrait pas les resize comme on perds de l'information et gérer ça avec des random crops dans la data augmentation
                   for image in images)
 
         # images is a generator, convert it to tensor
         images_tensor = tf.convert_to_tensor(list(images))
 
-        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_tmp)
+        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)  # TODO: passer de 0, 255 à 0, 1
 
         # mask is a generator, convert it to tensor
         masks = tf.convert_to_tensor(list(masks))
@@ -100,6 +96,6 @@ def test_data_generator(data_dir="data/stage1_train"):
 
     data_generator = DataGenerator(data_directory=data_dir, output_masks=('border_mask', 'union_mask'))
 
-    X, y = data_generator[0]
-    print(X[1].shape)
-    print(y[1].shape)
+    x, y = data_generator[0]
+    print(x.shape)
+    print(y.shape)
