@@ -50,12 +50,15 @@ class DataGenerator(Sequence):
 
         # images is a generator, convert it to array
         images = np.array(list(images))
-
+        # convert array from uint [0, 255] to float16 [0, 1]
+        images = images.astype(np.float16) / 255.
+        
         masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)
-        # TODO: passer de 0, 255 à 0, 1
 
         # mask is a generator, convert it to array
         masks = np.array(list(masks))
+        # convert array from uint [0, 255] to float16 [0, 1]
+        masks = masks.astype(np.float16) / 255.
 
         return images, masks
 
