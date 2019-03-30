@@ -57,5 +57,4 @@ if __name__ == "__main__":
     adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=0, decay=0)
     model.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
-    model.fit_generator(generate(), steps_per_epoch=len(generator), epochs=40,  # TODO replace with generator
-                        verbose=2, callbacks=[TensorBoard(log_dir=log_dir)])
+    model.fit_generator(generator, epochs=5, verbose=2, callbacks=[TensorBoard(log_dir=log_dir)])

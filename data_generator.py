@@ -3,6 +3,7 @@ from tensorflow.keras.utils import Sequence
 
 from pathlib import Path
 import numpy as np
+import cv2
 
 
 class DataGenerator(Sequence):
@@ -12,7 +13,7 @@ class DataGenerator(Sequence):
         self.batch_size = batch_size
         self.resolution = resolution
         self.n_channels = n_channels_input
-        self.suffle = shuffle
+        self.shuffle = shuffle
         self.output_masks = output_masks
 
         if ids_list is None:
@@ -41,26 +42,22 @@ class DataGenerator(Sequence):
     def __data_generation(self, ids_list_subset):
         """ take a list of ids of images and return the corresponding batch to feed the network """
         # get the images from the files
-        images_paths = (self.data_directory / image_id / "images" / image_id
+        images_paths = (self.data_directory / image_id / "images" / (image_id + ".png")
                         for image_id in ids_list_subset)
-        images_tensors = (tf.io.read_file(str(image_input_path), name=image_input_path.name)  # TODO: il manque pas un .png?
-                          for image_input_path in images_paths)
 
-        images = (tf.image.decode_png(image_tensor, channels=self.n_channels)
-                  for image_tensor in images_tensors)
+        images = (cv2.imread(str(image_path)) for image_path in images_paths)
+        images = (cv2.resize(image, self.resolution) for image in images)
 
-        images = (tf.image.resize_images(image, self.resolution[:2])  # TODO: à terme il faudrait pas les resize comme on perds de l'information et gérer ça avec des random crops dans la data augmentation
-                  for image in images)
+        # images is a generator, convert it to array
+        images = np.array(list(images))
 
-        # images is a generator, convert it to tensor
-        images_tensor = tf.convert_to_tensor(list(images))
+        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)
+        # TODO: passer de 0, 255 à 0, 1
 
-        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)  # TODO: passer de 0, 255 à 0, 1
+        # mask is a generator, convert it to array
+        masks = np.array(list(masks))
 
-        # mask is a generator, convert it to tensor
-        masks = tf.convert_to_tensor(list(masks))
-
-        return images_tensor, masks
+        return images, masks
 
     def get_channels_masks(self, id_image, processed_dir_name="processed_masks"):
         """ return the mask of a image. the image need to have been processed and the compiled mask must be in the
@@ -72,21 +69,21 @@ class DataGenerator(Sequence):
             raise ValueError("image {} has not been processed yet")
 
         # read each image as a channel
-        mask_channels = (tf.io.read_file(str(masks_dir / (mask_name + ".png"))) for mask_name in self.output_masks)
-        mask_channels = (tf.image.decode_png(mask_channel, channels=1) for mask_channel in mask_channels)
-        mask_channels = (tf.image.resize_images(mask_channel, self.resolution[:2]) for mask_channel in mask_channels)
+        mask_channels = (cv2.imread(str(masks_dir / (mask_name + ".png")), 0) for mask_name in self.output_masks)
+        mask_channels = (cv2.resize(mask_channel, self.resolution) for mask_channel in mask_channels)
 
         # each channel must be of dimension 2: shape [size1, size2, 1] => [size1, size2]
-        mask_channels = (tf.squeeze(mask_channel) for mask_channel in mask_channels)
+        mask_channels = (np.squeeze(mask_channel) for mask_channel in mask_channels)
 
-        # concatinate in a tensor all the channels
-        mask = tf.convert_to_tensor(list(mask_channels))
+        # concatinate all the channels
+        mask = np.array(list(mask_channels))
 
         # channels dimension must come last : shape [n_channels, size1, size2] => [size1, size2, n_channels]
         dim_permutation = list(range(len(mask.shape)))
         dim_permutation[0] = dim_permutation[-1]
         dim_permutation[-1] = 0
-        mask = tf.transpose(mask, perm=dim_permutation)
+        mask = np.transpose(mask, axes=dim_permutation)
+
         return mask
 
 
