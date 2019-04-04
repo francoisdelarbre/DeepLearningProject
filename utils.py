@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+from numba import njit
 
 
 @njit(error_model='numpy', parallel=True, fastmath=True)

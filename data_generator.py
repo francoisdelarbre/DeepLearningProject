@@ -7,8 +7,8 @@ import cv2
 
 
 class DataGenerator(Sequence):
-    def __init__(self, data_directory, ids_list=None, batch_size=32,
-                 resolution=(128, 128), n_channels_input=3, output_masks=('border_mask',), shuffle=True):
+    def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32,
+                 resolution=(128, 128), n_channels_input=3, shuffle=True):
         self.data_directory = Path(data_directory)
         self.batch_size = batch_size
         self.resolution = resolution
@@ -39,6 +39,11 @@ class DataGenerator(Sequence):
 
         return self.__data_generation(ids_list_subset)
 
+    def get_unique_item(self, item):
+        """same as item but only gives back a single element"""
+        id_item = self.ids_list[self.indexes[item]]
+        return self.__data_generation([id_item])
+
     def __data_generation(self, ids_list_subset):
         """ take a list of ids of images and return the corresponding batch to feed the network """
         # get the images from the files
@@ -46,7 +51,7 @@ class DataGenerator(Sequence):
                         for image_id in ids_list_subset)
 
         images = (cv2.imread(str(image_path)) for image_path in images_paths)
-        images = (cv2.resize(image, self.resolution) for image in images)
+        images = (cv2.resize(image, self.resolution) for image in images)  # TODO: gérer ça avec des random_crop dans un second temps
 
         # images is a generator, convert it to array
         images = np.array(list(images))
@@ -63,7 +68,7 @@ class DataGenerator(Sequence):
         return images, masks
 
     def get_channels_masks(self, id_image, processed_dir_name="processed_masks"):
-        """ return the mask of a image. the image need to have been processed and the compiled mask must be in the
+        """ return the mask of an image. The image needs to have been processed and the compiled mask must be in the
         subdirectory named processed_dir_name"""
 
         masks_dir = self.data_directory / id_image / processed_dir_name
@@ -73,13 +78,16 @@ class DataGenerator(Sequence):
 
         # read each image as a channel
         mask_channels = (cv2.imread(str(masks_dir / (mask_name + ".png")), 0) for mask_name in self.output_masks)
-        mask_channels = (cv2.resize(mask_channel, self.resolution) for mask_channel in mask_channels)
+        mask_channels = (cv2.resize(mask_channel, self.resolution) for mask_channel in mask_channels)  # TODO: gérer ça avec des random_crop dans un second temps
 
         # each channel must be of dimension 2: shape [size1, size2, 1] => [size1, size2]
         mask_channels = (np.squeeze(mask_channel) for mask_channel in mask_channels)
 
         # concatinate all the channels
         mask = np.array(list(mask_channels))
+
+        # TODO: gérer ça avec des random_crop dans un second temps
+        mask[mask != 0] = 255  # because cv2.resize makes interpolations so we have values between 0 and 255
 
         # channels dimension must come last : shape [n_channels, size1, size2] => [size1, size2, n_channels]
         dim_permutation = list(range(len(mask.shape)))
