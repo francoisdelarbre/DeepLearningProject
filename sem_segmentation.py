@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     model.fit_generator(generator, epochs=450, verbose=2, callbacks=[
         TensorBoard(log_dir=log_dir),
-        TensorBoardPredictedImage(img=tensorboard_img, label=tensorboard_label, model=model, log_dir=log_dir / 'img'),)]
+        TensorBoardPredictedImage(img=tensorboard_img, label=tensorboard_label, model=model, log_dir=log_dir / 'img'),])
         #LearningRateScheduler(lambda x, y: y if x not in epoch_reduce_list else red_fact*y)])
 
     print("end training")
