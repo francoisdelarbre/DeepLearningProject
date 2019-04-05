@@ -3,16 +3,17 @@ from tensorflow.keras.utils import Sequence
 
 from pathlib import Path
 import numpy as np
+import cv2
 
 
 class DataGenerator(Sequence):
-    def __init__(self, data_directory, ids_list=None, batch_size=32,
-                 resolution=(128, 128), n_channels_input=3, output_masks=('border_mask',), shuffle=True):
+    def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32,
+                 resolution=(128, 128), n_channels_input=3, shuffle=True):
         self.data_directory = Path(data_directory)
         self.batch_size = batch_size
         self.resolution = resolution
         self.n_channels = n_channels_input
-        self.suffle = shuffle
+        self.shuffle = shuffle
         self.output_masks = output_masks
 
         if ids_list is None:
@@ -38,32 +39,36 @@ class DataGenerator(Sequence):
 
         return self.__data_generation(ids_list_subset)
 
+    def get_unique_item(self, item):
+        """same as item but only gives back a single element"""
+        id_item = self.ids_list[self.indexes[item]]
+        return self.__data_generation([id_item])
+
     def __data_generation(self, ids_list_subset):
         """ take a list of ids of images and return the corresponding batch to feed the network """
         # get the images from the files
-        images_paths = (self.data_directory / image_id / "images" / image_id
+        images_paths = (self.data_directory / image_id / "images" / (image_id + ".png")
                         for image_id in ids_list_subset)
-        images_tensors = (tf.io.read_file(str(image_input_path), name=image_input_path.name)  # TODO: il manque pas un .png?
-                          for image_input_path in images_paths)
 
-        images = (tf.image.decode_png(image_tensor, channels=self.n_channels)
-                  for image_tensor in images_tensors)
+        images = (cv2.imread(str(image_path)) for image_path in images_paths)
+        images = (cv2.resize(image, self.resolution) for image in images)  # TODO: gérer ça avec des random_crop dans un second temps
 
-        images = (tf.image.resize_images(image, self.resolution[:2])  # TODO: à terme il faudrait pas les resize comme on perds de l'information et gérer ça avec des random crops dans la data augmentation
-                  for image in images)
+        # images is a generator, convert it to array
+        images = np.array(list(images))
+        # convert array from uint [0, 255] to float16 [0, 1]
+        images = images.astype(np.float16) / 255.
+        
+        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)
 
-        # images is a generator, convert it to tensor
-        images_tensor = tf.convert_to_tensor(list(images))
+        # mask is a generator, convert it to array
+        masks = np.array(list(masks))
+        # convert array from uint [0, 255] to float16 [0, 1]
+        masks = masks.astype(np.float16) / 255.
 
-        masks = (self.get_channels_masks(id_image=current_id) for current_id in ids_list_subset)  # TODO: passer de 0, 255 à 0, 1
-
-        # mask is a generator, convert it to tensor
-        masks = tf.convert_to_tensor(list(masks))
-
-        return images_tensor, masks
+        return images, masks
 
     def get_channels_masks(self, id_image, processed_dir_name="processed_masks"):
-        """ return the mask of a image. the image need to have been processed and the compiled mask must be in the
+        """ return the mask of an image. The image needs to have been processed and the compiled mask must be in the
         subdirectory named processed_dir_name"""
 
         masks_dir = self.data_directory / id_image / processed_dir_name
@@ -72,21 +77,24 @@ class DataGenerator(Sequence):
             raise ValueError("image {} has not been processed yet")
 
         # read each image as a channel
-        mask_channels = (tf.io.read_file(str(masks_dir / (mask_name + ".png"))) for mask_name in self.output_masks)
-        mask_channels = (tf.image.decode_png(mask_channel, channels=1) for mask_channel in mask_channels)
-        mask_channels = (tf.image.resize_images(mask_channel, self.resolution[:2]) for mask_channel in mask_channels)
+        mask_channels = (cv2.imread(str(masks_dir / (mask_name + ".png")), 0) for mask_name in self.output_masks)
+        mask_channels = (cv2.resize(mask_channel, self.resolution) for mask_channel in mask_channels)  # TODO: gérer ça avec des random_crop dans un second temps
 
         # each channel must be of dimension 2: shape [size1, size2, 1] => [size1, size2]
-        mask_channels = (tf.squeeze(mask_channel) for mask_channel in mask_channels)
+        mask_channels = (np.squeeze(mask_channel) for mask_channel in mask_channels)
 
-        # concatinate in a tensor all the channels
-        mask = tf.convert_to_tensor(list(mask_channels))
+        # concatinate all the channels
+        mask = np.array(list(mask_channels))
+
+        # TODO: gérer ça avec des random_crop dans un second temps
+        mask[mask != 0] = 255  # because cv2.resize makes interpolations so we have values between 0 and 255
 
         # channels dimension must come last : shape [n_channels, size1, size2] => [size1, size2, n_channels]
         dim_permutation = list(range(len(mask.shape)))
         dim_permutation[0] = dim_permutation[-1]
         dim_permutation[-1] = 0
-        mask = tf.transpose(mask, perm=dim_permutation)
+        mask = np.transpose(mask, axes=dim_permutation)
+
         return mask
 
 
