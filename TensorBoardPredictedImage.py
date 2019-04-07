@@ -39,7 +39,6 @@ class TensorBoardPredictedImage(Callback):
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 10 == 0:
             prediction = self.model.predict(self.input)
-            prediction = np.round(prediction)  # threshold at 0.5
             self._log_img(prediction, 'prediction', epoch)
 
     def _log_img(self, img, img_name, epoch):

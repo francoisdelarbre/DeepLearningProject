@@ -7,7 +7,6 @@ def conv_block(num_channels, starts_with_batchnorm=True, ends_with_batchnorm=Tru
     :param num_channels: the number of channels outputted by the convolutions
     :param starts_with_batchnorm: whether we start with a batch normalization layer or not
     :param ends_with_batchnorm: whether we end with a batch normalization layer or not
-
     :returns: a function representing the block"""
     def block_fct(x):
         if starts_with_batchnorm:
