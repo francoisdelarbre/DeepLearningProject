@@ -63,10 +63,10 @@ class DataGenerator(Sequence):
 
         return self.__data_generation(ids_list_subset)
 
-    def get_unique_item(self, item):
+    def get_some_items(self, items):
         """same as item but only gives back a single element"""
-        id_item = self.ids_list[self.indexes[item]]
-        return self.__data_generation([id_item])
+        id_item = self.ids_list[self.indexes[items]]
+        return self.__data_generation(id_item)
 
     def __data_generation(self, ids_list_subset):
         """ take a list of ids of images and return the corresponding batch to feed the network"""

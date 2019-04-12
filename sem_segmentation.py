@@ -50,7 +50,7 @@ if __name__ == "__main__":
     model = Model(inputs=inputs, outputs=output)
     model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
 
-    tensorboard_img, tensorboard_label = val_gen.get_unique_item(17)
+    tensorboard_img, tensorboard_label = val_gen.get_some_items([-17, -9, -7])
     model.fit_generator(train_gen, epochs=720, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir),
         TensorBoardPredictedImage(img=tensorboard_img, label=tensorboard_label, model=model, log_dir=log_dir / 'img')])

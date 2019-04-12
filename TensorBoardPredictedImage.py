@@ -7,18 +7,22 @@ import numpy as np
 from tensorflow.keras.callbacks import Callback
 
 
-def make_image(tensor):
+def make_image(image, label):
     """
     Convert an numpy representation image to Image protobuf.
-    Copied from https://github.com/lanpa/tensorboard-pytorch/
+    inspired from https://github.com/lanpa/tensorboard-pytorch/
     """
 
-    height, width, channel = tensor.shape
-    if channel == 1:
-        tensor = tensor[:, :, 0]
-    image = Image.fromarray((tensor*255).astype('uint8'))
+    height, width, channel = image.shape
+    if channel == 1:  # adding labels in 3rd dimension
+        image_with_label = np.zeros(image, dtype=np.uint8)
+        image_with_label[:, :, 0] = image * 255
+        image_with_label[:, :, 2] = label * 255
+    else:
+        raise ValueError('image should be black and white')
+    pil_image = Image.fromarray(image_with_label)
     output = io.BytesIO()
-    image.save(output, format='PNG')
+    pil_image.save(output, format='PNG')
     image_string = output.getvalue()
     output.close()
     return tf.Summary.Image(height=height,
@@ -27,23 +31,23 @@ def make_image(tensor):
                             encoded_image_string=image_string)
 
 
-class TensorBoardPredictedImage(Callback):
-    """class used to save the predictions of the model at different epochs to get an idea of its performances"""
-    def __init__(self, img, label, model, log_dir):
+class TensorBoardPredictedImages(Callback):
+    """class used to save the predictions of the model at different epochs to get an idea of its performances, for each
+    image, the label is displayed in blue and the prediction in red"""
+    def __init__(self, imgs, labels, model, log_dir):
         super().__init__()
         self.model = model
         self.log_dir = log_dir
-        self.input = img
-        self._log_img(label, 'label', 0)
+        self.inputs = imgs
+        self.labels = labels
 
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 10 == 0:
-            prediction = self.model.predict(self.input)
-            self._log_img(prediction, 'prediction', epoch)
-
-    def _log_img(self, img, img_name, epoch):
-        image = make_image(img[0, :, :, :])  # getting rid of dimension "batch_size"
-        summary = tf.Summary(value=[tf.Summary.Value(tag=img_name, image=image)])
-        writer = tf.summary.FileWriter(self.log_dir)
-        writer.add_summary(summary, epoch)
-        writer.close()
+            predictions = self.model.predict(self.inputs)
+            for i in predictions.shape[0]:
+                image = make_image(predictions[i, :, :, :], self.labels[i, :, :, :])  # getting rid of dimension
+                # "batch_size"
+                summary = tf.Summary(value=[tf.Summary.Value(tag='prediction' + str(i + 1), image=image)])
+                writer = tf.summary.FileWriter(self.log_dir)
+                writer.add_summary(summary, epoch)
+                writer.close()
