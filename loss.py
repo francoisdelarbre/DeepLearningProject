@@ -14,6 +14,7 @@ def dice_loss(y_true, y_pred, axis=(1, 2), smooth=1.):
 
 def bce_dice_loss(y_true, y_pred, weight=0.9):
     """combination of binary cross entropy and dice loss"""
+    weight_map = y_pred[:, :, :, -1]
     return (1 - weight) * binary_crossentropy(y_true, y_pred) + weight * dice_loss(y_true, y_pred)
 
 
@@ -25,3 +26,29 @@ def i_o_u_metric(y_true, y_pred, threshold=0.5, axis=(1, 2), smooth=1.):
     numerator = tf.constant(2.) * intersection + smooth
     denominator = union + smooth
     return tf.reduce_mean(numerator / denominator)
+
+
+def bce_dice_loss_unet(y_true, y_pred, weight=0.9, axis=(1, 2), smooth=1.):
+    """inspired from https://stackoverflow.com/questions/42591191/keras-semantic-segmentation-weighted-loss-pixel-map
+    same as bce dice loss but the last column of the y_pred is the weight map"""
+
+    weight_map = y_pred[:, :, :, -1]
+    y_pred = y_pred[:, :, :, :-1]
+
+    normalize_weight_map = tf.reduce_mean(weight_map)
+
+    # cross entropy
+    loss_map = tf.nn.softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred)  # loss_map of size
+    # batch_size*width_height
+    weighted_loss = tf.multiply(loss_map, weight_map)  # weight the loss of every pixel
+    weighted_CE_loss = tf.reduce_mean(weighted_loss) / normalize_weight_map
+
+    # dice loss
+    intersection = tf.reduce_sum((y_true * y_pred) * weight_map, axis=axis) / normalize_weight_map
+    union = tf.reduce_sum((y_true + y_pred) * weight_map, axis=axis) / normalize_weight_map
+    numerator = tf.constant(2.) * intersection + smooth
+    denominator = union + smooth
+    weighted_dice_loss = 1 - tf.reduce_mean(numerator / denominator)
+
+    # total loss
+    return (1 - weight) * weighted_CE_loss + weight * weighted_dice_loss

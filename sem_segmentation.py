@@ -9,7 +9,7 @@ import argparse
 import json
 
 from data_generator import DataGenerator
-from loss import bce_dice_loss, i_o_u_metric
+from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet
 from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
 from models.vanilla_unet import unet_model
@@ -22,7 +22,8 @@ parser.add_argument('--nbr_channels', default=3, type=int, help='number of chann
 parser.add_argument('--data_dir', default='data/stage1_train', type=str, help='directory containing the data')
 parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
-parser.add_argument('--out_masks', default='["union_mask"]', type=str, help='output masks as a json string')
+parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
+                    help='output masks as a json string, weight mask should be the last')
 parser.add_argument('--tensorboard_folder', default='', type=str, help='name of the tensorboard folder, if empty'
                                                                        'string, will use current time as name')
 
@@ -48,7 +49,8 @@ if __name__ == "__main__":
     output = unet_mobilenetv2(inputs, len(out_masks), shape=(args.input_size, args.input_size, args.nbr_channels),
                               mobilenet_upsampling=True)
     model = Model(inputs=inputs, outputs=output)
-    model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
+    model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss
+                  if "weight_mask" not in out_masks else bce_dice_loss_unet, metrics=[i_o_u_metric])
 
     tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -7])
     model.fit_generator(train_gen, epochs=720, verbose=2, validation_data=val_gen, callbacks=[
@@ -56,6 +58,6 @@ if __name__ == "__main__":
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])
 
-    model.save(str(log_dir / args.save_file /'.h5'))
+    model.save(str(log_dir / args.save_file / '.h5'))
 
     print("end training")

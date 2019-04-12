@@ -104,7 +104,13 @@ class DataGenerator(Sequence):
             raise ValueError("image {} has not been processed yet")
 
         # read each image as a channel
-        mask_channels = (cv2.imread(str(masks_dir / (mask_name + ".png")), 0) for mask_name in self.output_masks)
+        def process_mask(mask_name):
+            mask = cv2.imread(str(masks_dir / (mask_name + ".png")), 0)
+            if mask_name == "weight_mask":
+                mask[mask == 0] = 30  # so that the non-border cells are weakly weighted but still taken into account
+            return mask
+
+        mask_channels = (process_mask(mask_name) for mask_name in self.output_masks)
 
         # each channel must be of dimension 2: shape [size1, size2, 1] => [size1, size2]
         mask_channels = (np.squeeze(mask_channel) for mask_channel in mask_channels)
