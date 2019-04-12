@@ -15,7 +15,7 @@ def make_image(image, label):
 
     height, width, channel = image.shape
     if channel == 1:  # adding labels in 3rd dimension
-        image_with_label = np.zeros(image.shape, dtype=np.uint8)
+        image_with_label = np.zeros((height, width, 3), dtype=np.uint8)
         image_with_label[:, :, 0] = image[:, :, 0] * 255
         image_with_label[:, :, 2] = label[:, :, 0] * 255
     else:
