@@ -10,7 +10,7 @@ import json
 
 from data_generator import DataGenerator
 from loss import bce_dice_loss, i_o_u_metric
-from TensorBoardPredictedImage import TensorBoardPredictedImage
+from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
 from models.vanilla_unet import unet_model
 
@@ -50,10 +50,11 @@ if __name__ == "__main__":
     model = Model(inputs=inputs, outputs=output)
     model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
 
-    tensorboard_img, tensorboard_label = val_gen.get_some_items([-17, -9, -7])
+    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -7])
     model.fit_generator(train_gen, epochs=720, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir),
-        TensorBoardPredictedImage(img=tensorboard_img, label=tensorboard_label, model=model, log_dir=log_dir / 'img')])
+        TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
+                                   model=model, log_dir=log_dir / 'img')])
 
     model.save(str(log_dir / args.save_file /'.h5'))
 
