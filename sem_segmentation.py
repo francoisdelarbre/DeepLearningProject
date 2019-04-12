@@ -61,6 +61,6 @@ if __name__ == "__main__":
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])
 
-    model.save(str(log_dir / args.save_file / '.h5'))
+    model.save(str(log_dir / args.save_file + '.h5'))
 
     print("end training")
