@@ -44,10 +44,13 @@ class TensorBoardPredictedImages(Callback):
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 10 == 0:
             predictions = self.model.predict(self.inputs)
-            writer = tf.summary.FileWriter(self.log_dir)
+            sum_value = []
             for i in range(predictions.shape[0]):
                 image = make_image(predictions[i, :, :, :], self.labels[i, :, :, :])  # getting rid of dimension
                 # "batch_size"
-                summary = tf.Summary(value=[tf.Summary.Value(tag='prediction' + str(i + 1), image=image)])
-                writer.add_summary(summary, epoch)
+                sum_value.append(tf.Summary.Value(tag='prediction_' + str(i + 1), image=image))
+
+            writer = tf.summary.FileWriter(self.log_dir)
+            summary = tf.Summary(value=sum_value)
+            writer.add_summary(summary, epoch)
             writer.close()
