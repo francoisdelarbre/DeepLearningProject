@@ -44,7 +44,7 @@ class TensorBoardPredictedImages(Callback):
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 10 == 0:
             predictions = self.model.predict(self.inputs)
-            for i in predictions.shape[0]:
+            for i in range(predictions.shape[0]):
                 image = make_image(predictions[i, :, :, :], self.labels[i, :, :, :])  # getting rid of dimension
                 # "batch_size"
                 summary = tf.Summary(value=[tf.Summary.Value(tag='prediction' + str(i + 1), image=image)])
