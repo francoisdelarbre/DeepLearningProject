@@ -94,7 +94,7 @@ def _inverted_res_block_upsampling(inputs, expansion, filters, block_id, increas
     increasing the feature map size, we perform the fm size increase in the expand layer"""
     in_channels = keras_backend.int_shape(inputs)[-1]
     x = inputs
-    prefix = f'up_block_{block_id}_'
+    prefix = 'up_block_{}_'.format(block_id)
 
     # Expand
     if increase_fm_size:

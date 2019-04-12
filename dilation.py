@@ -12,9 +12,9 @@ if __name__ == "__main__":
     img_list = os.listdir(PATH)  # list of training images
     num_samples = len(img_list)
     for i, sample in enumerate(img_list):  # iterate over training images
-        print(f"{i} samples treated out of {num_samples}")
+        print("{} samples treated out of {}".format(i, num_samples))
         path_to_masks = Path(PATH) / sample / 'masks'  # path to the masks of the image
-        masks_list = os.listdir(path_to_masks)  # list of the masks of the image
+        masks_list = os.listdir(str(path_to_masks))  # list of the masks of the image
 
         based_img = cv2.imread(str(Path(path_to_masks) / masks_list[0]), cv2.IMREAD_GRAYSCALE)
         img_sum = np.zeros(based_img.shape).astype("float")
@@ -35,8 +35,8 @@ if __name__ == "__main__":
 
         dir_name = Path(PATH) / sample / 'processed_masks'
 
-        if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
+        if not os.path.exists(str(dir_name)):
+            os.makedirs(str(dir_name))
 
         img_sum = np.uint8(img_sum) * 255
         dilated_sum = np.uint8(dilated_sum) * 255
