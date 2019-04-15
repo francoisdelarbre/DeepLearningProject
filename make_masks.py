@@ -36,7 +36,7 @@ if __name__ == "__main__":
             border_mask += dilated_img  # make the sum of the dilated mask
 
             boundary = img - cv2.erode(img, kernel, iterations=1)
-            weight_mask +=  boundary
+            weight_mask += boundary
 
         border_mask[border_mask == 1] = 0
         border_mask[border_mask > 1] = 1

@@ -14,6 +14,10 @@ def make_image(image, label):
     """
 
     height, width, channel = image.shape
+    if channel == 2:
+        image = image[:, :, :-1]
+        channel = 1  # because keras is fucked up when having custom losses
+        # https://github.com/keras-team/keras/issues/4781
     if channel == 1:  # adding labels in 3rd dimension
         image_with_label = np.zeros((height, width, 3), dtype=np.uint8)
         image_with_label[:, :, 0] = image[:, :, 0] * 255
@@ -44,10 +48,13 @@ class TensorBoardPredictedImages(Callback):
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 10 == 0:
             predictions = self.model.predict(self.inputs)
+            sum_value = []
             for i in range(predictions.shape[0]):
                 image = make_image(predictions[i, :, :, :], self.labels[i, :, :, :])  # getting rid of dimension
                 # "batch_size"
-                summary = tf.Summary(value=[tf.Summary.Value(tag='prediction' + str(i + 1), image=image)])
-                writer = tf.summary.FileWriter(self.log_dir)
-                writer.add_summary(summary, epoch)
-                writer.close()
+                sum_value.append(tf.Summary.Value(tag='prediction_' + str(i + 1), image=image))
+
+            writer = tf.summary.FileWriter(self.log_dir)
+            summary = tf.Summary(value=sum_value)
+            writer.add_summary(summary, epoch)
+            writer.close()
