@@ -81,15 +81,10 @@ def get_full_resolution(cropped_images, coordonates, original_resolution, round=
     # TODO: We could give a lower weight to pixels that are close to the borders
     cropped_image_weight = np.ones(cropped_image_shape, dtype=FLOAT_TYPE)
     
-    print(len(cropped_image_weight.shape))
-    print(len(cropped_image_shape))
-    print(len(cropped_image_weight.shape) < len(cropped_image_shape))
     if len(cropped_image_weight.shape) < len(cropped_image_shape):
         cropped_image_weight = cropped_image_weight[:,:,np.newaxis]
     
     for cropped_image, coordonate in zip(cropped_images, coordonates):
-        print(cropped_image.shape)
-        print(cropped_image_weight.shape)
         image[coordonate[0]:coordonate[0]+cropped_image.shape[0], coordonate[1]:coordonate[1]+cropped_image.shape[1]] += \
             cropped_image * cropped_image_weight
         image_load[coordonate[0]:coordonate[0]+cropped_image.shape[0], coordonate[1]:coordonate[1]+cropped_image.shape[1]] += cropped_image_ones
