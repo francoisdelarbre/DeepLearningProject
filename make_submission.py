@@ -58,7 +58,6 @@ def make_submission_file(model=None, model_dir=None, model_name="model.h5", imag
         csv_writer = csv.writer(submission_file)
         csv_writer.writerow(["ImageId", "EncodedPixels"])
         
-        gros_caca = True
         for image_id, prediction in zip(images_ids, predictions):
             nb_label, mask = cv2.connectedComponents((prediction*255).astype(np.uint8))
             if nb_label > 1:
