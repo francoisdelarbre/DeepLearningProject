@@ -31,8 +31,8 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     out_masks = json.loads(args.out_masks)
-    log_dir = Path("tf_logs") / (datetime.now().strftime("%Y.%m.%d-%H.%M") if args.tensorboard_folder == ''
-                                 else args.tensorboard_folder)
+    log_dir = Path("tf_logs") / (datetime.now().strftime("%Y.%m.%d-%H.%M") if args.save_file == 'model'
+                                 else args.save_file)
 
     ids_list_train, ids_list_val = split_train_val(args.data_dir, args.train_prop)
 
