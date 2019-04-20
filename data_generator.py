@@ -11,14 +11,25 @@ import cv2
 
 
 class DataGenerator(Sequence):
-    def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32,
-                 resolution=128, n_channels_input=3, shuffle=True, performs_data_augmentation=True):
+    def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
+                 shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30):
+        """:param data_directory: the directory containing the data
+        :param output_masks: the name of the masks to output
+        :param ids_list: the list of ids of the images to use
+        :param batch_size: the batch size to use
+        :param resolution: the resolution of the images/masks
+        :param n_channels_input: the number of channels in an input image
+        :param shuffle: wether to shuffle the inputs
+        :param performs_data_augmentation: wether to perform data augmentation or not
+        :param non_border_cells_weights: if 'weight_mask' in output_masks: the weight to give to non_border_cells
+        pixels (border cells pixels have a weight of 256)"""
         self.data_directory = Path(data_directory)
         self.batch_size = batch_size
         self.n_channels = n_channels_input
         self.shuffle = shuffle
         self.resolution = resolution
         self.output_masks = output_masks
+        self.non_border_cells_weights = non_border_cells_weights
 
         # data augmentation pipeline:
         if performs_data_augmentation:
@@ -38,7 +49,7 @@ class DataGenerator(Sequence):
                                           OneOf([RGBShift(p=.5), ToGray(p=.5)], p=.3)
                                           ])  # TODO: add nuclei to cells to improve cell separation, use transforms.Lambda
         else:
-            self.preprocessing = Compose([CenterCrop(resolution, resolution, p=1.0)])
+            self.preprocessing = Compose([CenterCrop(resolution, resolution, p=1.0)])  # TODO: perform several different crops?
 
         if ids_list is None:
             ids_list = [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
@@ -107,7 +118,8 @@ class DataGenerator(Sequence):
         def process_mask(mask_name):
             mask = cv2.imread(str(masks_dir / (mask_name + ".png")), 0)
             if mask_name == "weight_mask":
-                mask[mask == 0] = 30  # so that the non-border cells are weakly weighted but still taken into account
+                mask[mask == 0] = self.non_border_cells_weights  # so that the non-border cells are weakly weighted but
+                # still taken into account
             return mask
 
         mask_channels = (process_mask(mask_name) for mask_name in self.output_masks)

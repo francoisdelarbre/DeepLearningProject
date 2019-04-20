@@ -25,6 +25,9 @@ parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
 parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
                     help='output masks as a json string, weight mask should be the last if it is present')
+parser.add_argument('--non_border_cells_weights', default=30, type=int,
+                    help="if 'weight_mask' in output_masks: the weight to give to non_border_cells pixels (border cells"
+                         " pixels have a weight of 256)")
 
 args = parser.parse_args()
 
@@ -52,12 +55,11 @@ if __name__ == "__main__":
     else:
         model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
 
-    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -7])
     model.fit_generator(train_gen, epochs=150, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir),
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])
 
-    model.save(str(Path('h5_files') / args.save_file / '.h5'))
+    model.save(str(Path('h5_files') / (args.save_file + '.h5')))
 
     print("end training")
