@@ -16,7 +16,8 @@ from models.vanilla_unet import unet_model
 
 
 parser = argparse.ArgumentParser(description='Computing table')
-parser.add_argument('--save_file', default='model', type=str, help='file name of the model')
+parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
+                                                                   'dir if different from model')
 parser.add_argument('--input_size', default=128, type=int, help='width/height of the input')
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
 parser.add_argument('--data_dir', default='data/stage1_train', type=str, help='directory containing the data')
@@ -24,8 +25,6 @@ parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
 parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
                     help='output masks as a json string, weight mask should be the last if it is present')
-parser.add_argument('--tensorboard_folder', default='', type=str, help='name of the tensorboard folder, if empty'
-                                                                       'string, will use current time as name')
 
 args = parser.parse_args()
 
