@@ -4,7 +4,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.layers import Input
 from pathlib import Path
-import random
 import argparse
 import json
 
@@ -12,6 +11,7 @@ from data_generator import DataGenerator
 from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet
 from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
+from utils import split_train_val
 from models.vanilla_unet import unet_model
 
 
@@ -34,11 +34,8 @@ if __name__ == "__main__":
     out_masks = json.loads(args.out_masks)
     log_dir = Path("tf_logs") / (datetime.now().strftime("%Y.%m.%d-%H.%M") if args.tensorboard_folder == ''
                                  else args.tensorboard_folder)
-    ids_list = [directory.name for directory in Path(args.data_dir).iterdir() if directory.is_dir()]
 
-    random.Random(17).shuffle(ids_list)
-    last_train_element = int(0.9 * len(ids_list))
-    ids_list_train, ids_list_val = ids_list[:last_train_element], ids_list[last_train_element:]
+    ids_list_train, ids_list_val = split_train_val(args.data_dir, args.train_prop)
 
     train_gen = DataGenerator(args.data_dir, output_masks=out_masks, batch_size=args.batch_size,
                               resolution=args.input_size, performs_data_augmentation=True, ids_list=ids_list_train)
@@ -53,11 +50,11 @@ if __name__ == "__main__":
                   if "weight_mask" not in out_masks else bce_dice_loss_unet, metrics=[i_o_u_metric])
 
     tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -7])
-    model.fit_generator(train_gen, epochs=720, verbose=2, validation_data=val_gen, callbacks=[
+    model.fit_generator(train_gen, epochs=150, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir),
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])
 
-    model.save(str(log_dir / args.save_file / '.h5'))
+    model.save(str(Path('h5_files') / args.save_file / '.h5'))
 
     print("end training")

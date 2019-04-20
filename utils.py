@@ -3,6 +3,7 @@ from numba import njit
 from pathlib import Path
 import cv2
 from matplotlib import pyplot as plt
+import random
 
 FLOAT_TYPE = np.float32
 
@@ -27,10 +28,24 @@ def get_run_length_enc(array):
 
     return run_length
 
+
+def split_train_val(data_dir, train_prop):
+    """splits the data into training and validation sets
+    :param data_dir: the directory containing the data
+    :param train_prop: the proportion of the dataset used for training
+    :return ids_list_train, ids_list_val: the ids of the images in the training and validation set"""
+    ids_list = [directory.name for directory in Path(data_dir).iterdir() if directory.is_dir()]
+
+    random.Random(17).shuffle(ids_list)
+    last_train_element = int(train_prop * len(ids_list))
+    return ids_list[:last_train_element], ids_list[last_train_element:]
+
+
 def get_resized_images(image, output_resolution=(128, 128), overlapping=(10, 10)):
     """given a 2D float32 image of 0's and 1's, returns
     - a list of the cropped images 
-    - a list the coordonate of the upper left corner in the  original image (from the upper left corner) of the coresponding cropped image in the first list"""
+    - a list the coordonate of the upper left corner in the  original image (from the upper left corner) of the
+    coresponding cropped image in the first list"""
     
     number_hor_crops = image.shape[0] // (output_resolution[0] - overlapping[0]) + \
         (1 if image.shape[0] % (output_resolution[0] - overlapping[0]) else 0)
