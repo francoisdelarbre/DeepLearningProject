@@ -3,7 +3,7 @@ import cv2
 import os
 from pathlib import Path
 
-PATH = 'data/stage1_train'  # path to the training set
+PATH = 'data/extra_data'  # path to the training set
 KERNEL_SIZE = 3
 
 if __name__ == "__main__":

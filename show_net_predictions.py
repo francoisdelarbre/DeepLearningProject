@@ -14,8 +14,8 @@ from data_generator import DataGenerator
 
 
 parser = argparse.ArgumentParser(description='showing net predictions on val data')
-parser.add_argument('--model_name', default='model', type=str, help= 'name of the model file without extension, '
-                                                                     'assumed to lay in h5_files folder')
+parser.add_argument('--model_name', default='model', type=str, help='name of the model file without extension, '
+                                                                    'assumed to lay in h5_files folder')
 parser.add_argument('--input_size', default=128, type=int, help='width/height of the input')
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
 parser.add_argument('--data_dir', default='data/stage1_train', type=str, help='directory containing the data')
@@ -35,8 +35,8 @@ if __name__ == '__main__':
 
     _, ids_list_val = split_train_val(args.data_dir, args.train_prop)
 
-    val_gen = DataGenerator(args.data_dir, output_masks=out_masks, batch_size=1,
-                            resolution=args.input_size, performs_data_augmentation=False, ids_list=ids_list_val)
+    val_gen = DataGenerator((args.data_dir,), output_masks=out_masks, batch_size=1,
+                            resolution=args.input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
 
     print("several images will be predicted, press 'ctrl-c' to quit or 'n' to show next image")
     print("shows into the order: top: [in_img, pred_mask_1, pred_mask_2, ...], "
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         line_2 = np.hstack(line_2)
         img_to_plot = (np.vstack([line_1, line_2]) * 255).astype(np.uint8)
 
-        rescaling_factor = 512 // max(img_to_plot.shape[0], img_to_plot.shape[1])
+        rescaling_factor = 512 / max(img_to_plot.shape[0], img_to_plot.shape[1])
         img_to_plot = cv2.resize(img_to_plot, None, fx=rescaling_factor, fy=rescaling_factor)
 
         cv2.imshow('img and predicted masks', img_to_plot)

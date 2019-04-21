@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 
+
 def get_5_crops_gen(resolution):
     """returns a get_5_crops function with the corresponding resolution"""
 
@@ -35,21 +36,28 @@ def get_5_crops_gen(resolution):
     return get_5_crops
 
 
-
 class DataGenerator(Sequence):
-    def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
+    def __init__(self, data_directories, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
                  shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30):
-        """:param data_directory: the directory containing the data
+        """:param data_directories: the directories containing the data as a tuple of 2 elements, the first one is the
+        main dataset and the second one is another dataset to use (the second one is optionnal, i.e. (name1,) and
+        (name1, name2) are accepted)
         :param output_masks: the name of the masks to output
-        :param ids_list: the list of ids of the images to use
+        :param ids_list: the list of ids of the images to use a pair whose first elements corresponds to the first
+        dataset and the second one to the other, each of those can be None to signify we want to use all of the images
         :param batch_size: the batch size to use
         :param resolution: the resolution of the images/masks
         :param n_channels_input: the number of channels in an input image
         :param shuffle: wether to shuffle the inputs
         :param performs_data_augmentation: wether to perform data augmentation or not
         :param non_border_cells_weights: if 'weight_mask' in output_masks: the weight to give to non_border_cells
-        pixels (border cells pixels have a weight of 256)"""
-        self.data_directory = Path(data_directory)
+        pixels (border cells pixels have a weight of 255)"""
+        self.main_data_directory = Path(data_directories[0])
+        if len(data_directories) == 1:
+            self.secondary_data_directoy = None
+        else:
+            self.secondary_data_directoy = Path(data_directories[1])
+
         self.batch_size = batch_size
         self.n_channels = n_channels_input
         self.shuffle = shuffle
@@ -78,11 +86,19 @@ class DataGenerator(Sequence):
         else:
             self.preprocessing = get_5_crops_gen(self.resolution)
 
-        if ids_list is None:
-            ids_list = [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
+        main_ids_list = ids_list[0] if ids_list[0] is not None else \
+            [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
 
-        self.ids_list = np.array(ids_list)
-        self.indexes = np.arange(len(self.ids_list))
+        if self.secondary_data_directoy is None:
+            secondary_ids_list = []
+        else:
+            secondary_ids_list = ids_list[1] if ids_list[1] is not None else \
+                [directory.name for directory in self.secondary_data_directoy.iterdir() if directory.is_dir()]
+
+        self.main_indexes_limit = len(main_ids_list)
+        main_ids_list.extend(secondary_ids_list)  # main_ids_list now contains all of the samples
+        self.ids_list = np.array(main_ids_list)
+        self.indexes = np.arange(self.ids_list.shape[0])
 
     def on_epoch_end(self):
         """ called at the end of each epoch """
@@ -90,7 +106,7 @@ class DataGenerator(Sequence):
             np.random.shuffle(self.indexes)
 
     def __len__(self):
-        """ return the number of batchs used to compute the number of steps per epoch """
+        """ return the number of batches used to compute the number of steps per epoch """
         return len(self.ids_list) // self.batch_size
 
     def __getitem__(self, item):
@@ -99,22 +115,25 @@ class DataGenerator(Sequence):
 
         ids_list_subset = self.ids_list[indexes]
 
-        return self.__data_generation(ids_list_subset)
+        return self.__data_generation(indexes, ids_list_subset)
 
     def get_some_items(self, items):
-        """same as item but only gives back a single element"""
-        id_item = self.ids_list[self.indexes[items]]
-        return self.__data_generation(id_item)
+        """same as item but only gives back a single element of the first set (so )"""
+        indexes = self.indexes[items]
+        id_item = self.ids_list[indexes]
+        return self.__data_generation(indexes, id_item)
 
-    def __data_generation(self, ids_list_subset):
-        """ take a list of ids of images and return the corresponding batch to feed the network"""
+    def __data_generation(self, indexes, ids_list_subset):
+        """take a list of ids of images as well as their indexes and returns the corresponding batch to feed
+        the network"""
         # get the images/masks from the files
-        images_paths = (self.data_directory / image_id / "images" / (image_id + ".png")
-                        for image_id in ids_list_subset)
+        images_paths = ((self.main_data_directory if index < self.main_indexes_limit
+                         else self.secondary_data_directoy) / image_id / "images" / (image_id + ".png")
+                        for index, image_id in zip(indexes, ids_list_subset))
 
         images = (cv2.imread(str(image_path)) for image_path in images_paths)
-        masks = (self.get_channels_masks(id_image=current_id)
-                 for current_id in ids_list_subset)
+        masks = (self.get_channels_masks(index=index, id_image=current_id)
+                 for index, current_id in zip(indexes, ids_list_subset))
 
         # data augmentation
         if self.performs_data_augmentation:
@@ -135,11 +154,12 @@ class DataGenerator(Sequence):
 
         return processed_images, processed_masks
 
-    def get_channels_masks(self, id_image, processed_dir_name="processed_masks"):
+    def get_channels_masks(self, index, id_image, processed_dir_name="processed_masks"):
         """ return the masks of an image. The image needs to have been processed and the compiled mask must be in the
         subdirectory named processed_dir_name"""
 
-        masks_dir = self.data_directory / id_image / processed_dir_name
+        masks_dir = (self.main_data_directory if index < self.main_indexes_limit
+                     else self.secondary_data_directoy) / id_image / processed_dir_name
 
         if not masks_dir.is_dir():
             raise ValueError("image has not been processed yet")
@@ -210,7 +230,7 @@ def visualize(image, mask, original_image=None, original_mask=None):
 # TODO: make more tests?
 def test_data_generator(data_dir="data/stage1_train"):
 
-    data_generator = DataGenerator(data_directory=data_dir, output_masks=('border_mask', 'union_mask'))
+    data_generator = DataGenerator(data_directories=(data_dir,), output_masks=('border_mask', 'union_mask'))
 
     x, y = data_generator[0]
     print(x.shape)
