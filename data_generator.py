@@ -74,7 +74,8 @@ class DataGenerator(Sequence):
             medium_color_augm = Compose([CLAHE(p=1), HueSaturationValue(hue_shift_limit=20, sat_shift_limit=50,
                                                                         val_shift_limit=50, p=1)], p=.25)
             huge_color_augm = Compose([ChannelShuffle(p=1)], p=.5)  # ChannelShuffle more likely than the 2 others
-            self.preprocessing = Compose([RandomSizedCrop(min_max_height=(int(resolution*2/3), int(resolution*3/2)),
+            self.preprocessing = Compose([RandomSizedCrop(min_max_height=(int(resolution*2/3),
+                                                                          min(256, int(resolution*3/2))),
                                                           height=resolution, width=resolution,
                                                           interpolation=cv2.INTER_NEAREST, p=1.0),
                                           OneOf([OpticalDistortion(p=1.0, distort_limit=2, shift_limit=0.5),
