@@ -25,6 +25,10 @@ parser.add_argument('--main_data_dir', default='data/stage1_train', type=str, he
 parser.add_argument('--sec_data_dir', default='data/extra_data', type=str,
                     help='directory containing another dataset that looks like the main one to improve results, set to '
                          '"" if only the main dataset is to be used')
+parser.add_argument('--sec_data_dir_factor', default=1., type=float,
+                    help='set this value to use more the secondary data set, this makes sense if, for example, the '
+                         'images are bigger in the secondary dataset (you can ignore this if you do not use a secondary'
+                         'dataset ')
 parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
 parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
@@ -43,9 +47,16 @@ if __name__ == "__main__":
 
     ids_list_train, ids_list_val = split_train_val(args.main_data_dir, args.train_prop)
 
-    data_dirs = (args.main_data_dir, args.sec_data_dir) if args.sec_data_dir != '' else (args.main_data_dir,)
+    if args.sec_data_dir == '':
+        data_dirs = (args.main_data_dir,)
+        ids_list_train = (ids_list_train,)
+    else:
+        data_dirs = (args.main_data_dir, args.sec_data_dir)
+        ids_list_train = (ids_list_train, None)  # uses all the extra set as training data
+
     train_gen = DataGenerator(data_dirs, output_masks=out_masks, batch_size=args.batch_size,
-                              resolution=args.input_size, performs_data_augmentation=True, ids_list=(ids_list_train,))
+                              resolution=args.input_size, performs_data_augmentation=True, ids_list=ids_list_train,
+                              sec_data_dir_factor=args.sec_data_dir_factor)
 
     val_batch_size = args.batch_size // 5 + 1  # // 5 + 1 because we will perform validation on 5 crops (4 corners +
     # center)
@@ -63,7 +74,7 @@ if __name__ == "__main__":
     else:
         model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
 
-    model.fit_generator(train_gen, epochs=150, verbose=2, validation_data=val_gen, callbacks=[
+    model.fit_generator(train_gen, epochs=220, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir, write_graph=False),
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])

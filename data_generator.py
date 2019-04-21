@@ -38,7 +38,7 @@ def get_5_crops_gen(resolution):
 
 class DataGenerator(Sequence):
     def __init__(self, data_directories, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
-                 shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30):
+                 shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30, sec_data_dir_factor=1.):
         """:param data_directories: the directories containing the data as a tuple of 2 elements, the first one is the
         main dataset and the second one is another dataset to use (the second one is optionnal, i.e. (name1,) and
         (name1, name2) are accepted)
@@ -51,7 +51,9 @@ class DataGenerator(Sequence):
         :param shuffle: wether to shuffle the inputs
         :param performs_data_augmentation: wether to perform data augmentation or not
         :param non_border_cells_weights: if 'weight_mask' in output_masks: the weight to give to non_border_cells
-        pixels (border cells pixels have a weight of 255)"""
+        pixels (border cells pixels have a weight of 255)
+        :param sec_data_dir_factor: the relative importance of the images from the secondary dataset w.r.t. the main one
+        (ignore if there is no secondary dataset)"""
         self.main_data_directory = Path(data_directories[0])
         if len(data_directories) == 1:
             self.secondary_data_directoy = None
@@ -94,6 +96,8 @@ class DataGenerator(Sequence):
         else:
             secondary_ids_list = ids_list[1] if ids_list[1] is not None else \
                 [directory.name for directory in self.secondary_data_directoy.iterdir() if directory.is_dir()]
+            secondary_ids_list = sec_data_dir_factor * sec_data_dir_factor  # repeat the images several times to
+            # compensate the fact they are bigger, makes sense since we always take random crops
 
         self.main_indexes_limit = len(main_ids_list)
         main_ids_list.extend(secondary_ids_list)  # main_ids_list now contains all of the samples
