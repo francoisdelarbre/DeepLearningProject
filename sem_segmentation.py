@@ -41,7 +41,10 @@ if __name__ == "__main__":
 
     train_gen = DataGenerator(args.data_dir, output_masks=out_masks, batch_size=args.batch_size,
                               resolution=args.input_size, performs_data_augmentation=True, ids_list=ids_list_train)
-    val_gen = DataGenerator(args.data_dir, output_masks=out_masks, batch_size=args.batch_size,
+
+    val_batch_size = args.batch_size // 5 + 1  # // 5 + 1 because we will perform validation on 5 crops (4 corners +
+    # center)
+    val_gen = DataGenerator(args.data_dir, output_masks=out_masks, batch_size=val_batch_size,
                             resolution=args.input_size, performs_data_augmentation=False, ids_list=ids_list_val)
     tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
 

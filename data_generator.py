@@ -9,6 +9,32 @@ from pathlib import Path
 import numpy as np
 import cv2
 
+def get_5_crops_gen(resolution):
+    """returns a get_5_crops function with the corresponding resolution"""
+
+    def get_5_crops(images, masks, resolution=resolution):
+        """returns the concatenation of the 5 crops (top-left, top-right, center, bottom-left, bottom-right)
+        of the image and the masks"""
+        processed_images = []
+        processed_masks = []
+        for image, mask in zip(images, masks):
+            img_size = image.shape
+            for crop_idx in [(0, resolution, 0, resolution),
+                             (0, resolution, -resolution, img_size[1]),
+                             ((img_size[0] - resolution) // 2, (img_size[0] + resolution) // 2,
+                              (img_size[1] - resolution) // 2, (img_size[1] + resolution) // 2),
+                             (-resolution, img_size[0], 0, resolution),
+                             (-resolution, img_size[0], -resolution, img_size[1])]:
+                crops_image = image[crop_idx[0]:crop_idx[1], crop_idx[2]:crop_idx[3], :]
+                crops_mask = mask[crop_idx[0]:crop_idx[1], crop_idx[2]:crop_idx[3], :]
+                processed_images.append(crops_image)
+                processed_masks.append(crops_mask)
+
+        return processed_images, processed_masks
+
+    return get_5_crops
+
+
 
 class DataGenerator(Sequence):
     def __init__(self, data_directory, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
@@ -30,6 +56,7 @@ class DataGenerator(Sequence):
         self.resolution = resolution
         self.output_masks = output_masks
         self.non_border_cells_weights = non_border_cells_weights
+        self.performs_data_augmentation = performs_data_augmentation
 
         # data augmentation pipeline:
         if performs_data_augmentation:
@@ -49,7 +76,7 @@ class DataGenerator(Sequence):
                                           OneOf([RGBShift(p=.5), ToGray(p=.5)], p=.3)
                                           ])  # TODO: add nuclei to cells to improve cell separation, use transforms.Lambda
         else:
-            self.preprocessing = Compose([CenterCrop(resolution, resolution, p=1.0)])  # TODO: perform several different crops?
+            self.preprocessing = get_5_crops_gen(self.resolution)
 
         if ids_list is None:
             ids_list = [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
@@ -90,17 +117,20 @@ class DataGenerator(Sequence):
                  for current_id in ids_list_subset)
 
         # data augmentation
-        processed_images = []
-        processed_masks = []
-        for image, mask in zip(images, masks):
-            augmented = self.preprocessing(image=image, mask=mask)
-            processed_images.append(augmented['image'])
-            processed_masks.append(augmented['mask'])
+        if self.performs_data_augmentation:
+            processed_images = []
+            processed_masks = []
+            for image, mask in zip(images, masks):
+                augmented = self.preprocessing(image=image, mask=mask)
+                processed_images.append(augmented['image'])
+                processed_masks.append(augmented['mask'])
+        else:
+            processed_images, processed_masks = self.preprocessing(images, masks)
 
         # convert to numpy array and rescale
         processed_images = np.array(processed_images)
-        processed_images = processed_images.astype(np.float16) / 255.
         processed_masks = np.array(processed_masks)
+        processed_images = processed_images.astype(np.float16) / 255.
         processed_masks = processed_masks.astype(np.float16) / 255.
 
         return processed_images, processed_masks
@@ -112,7 +142,7 @@ class DataGenerator(Sequence):
         masks_dir = self.data_directory / id_image / processed_dir_name
 
         if not masks_dir.is_dir():
-            raise ValueError("image {} has not been processed yet")
+            raise ValueError("image has not been processed yet")
 
         # read each image as a channel
         def process_mask(mask_name):

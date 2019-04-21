@@ -17,6 +17,8 @@ if __name__ == "__main__":
     num_samples = len(img_list)
     for i, sample in enumerate(img_list):  # iterate over training images
         print("{} samples treated out of {}".format(i, num_samples))
+        if sample == '.DS_Store':
+            continue
         path_to_masks = Path(PATH) / sample / 'masks'  # path to the masks of the image
         masks_list = os.listdir(str(path_to_masks))  # list of the masks of the image
 
