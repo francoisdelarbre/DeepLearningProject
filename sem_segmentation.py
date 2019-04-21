@@ -18,6 +18,7 @@ from models.vanilla_unet import unet_model
 parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
                                                                    'dir if different from model')
+parser.add_argument('--num_epochs', default=150, type=int, help='number of epochs')
 parser.add_argument('--input_size', default=128, type=int, help='width/height of the input')
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
 parser.add_argument('--main_data_dir', default='data/stage1_train', type=str, help='directory containing the principal '
@@ -25,7 +26,7 @@ parser.add_argument('--main_data_dir', default='data/stage1_train', type=str, he
 parser.add_argument('--sec_data_dir', default='data/extra_data', type=str,
                     help='directory containing another dataset that looks like the main one to improve results, set to '
                          '"" if only the main dataset is to be used')
-parser.add_argument('--sec_data_dir_factor', default=1., type=float,
+parser.add_argument('--sec_data_dir_factor', default=4, type=int,
                     help='set this value to use more the secondary data set, this makes sense if, for example, the '
                          'images are bigger in the secondary dataset (you can ignore this if you do not use a secondary'
                          'dataset ')
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     else:
         model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
 
-    model.fit_generator(train_gen, epochs=220, verbose=2, validation_data=val_gen, callbacks=[
+    model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir, write_graph=False),
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
                                    model=model, log_dir=log_dir / 'img')])

@@ -38,7 +38,7 @@ def get_5_crops_gen(resolution):
 
 class DataGenerator(Sequence):
     def __init__(self, data_directories, output_masks, ids_list=None, batch_size=32, resolution=128, n_channels_input=3,
-                 shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30, sec_data_dir_factor=1.):
+                 shuffle=True, performs_data_augmentation=True, non_border_cells_weights=30, sec_data_dir_factor=1):
         """:param data_directories: the directories containing the data as a tuple of 2 elements, the first one is the
         main dataset and the second one is another dataset to use (the second one is optionnal, i.e. (name1,) and
         (name1, name2) are accepted)
@@ -96,7 +96,7 @@ class DataGenerator(Sequence):
         else:
             secondary_ids_list = ids_list[1] if ids_list[1] is not None else \
                 [directory.name for directory in self.secondary_data_directoy.iterdir() if directory.is_dir()]
-            secondary_ids_list = sec_data_dir_factor * sec_data_dir_factor  # repeat the images several times to
+            secondary_ids_list = secondary_ids_list * sec_data_dir_factor  # repeat the images several times to
             # compensate the fact they are bigger, makes sense since we always take random crops
 
         self.main_indexes_limit = len(main_ids_list)
@@ -131,8 +131,9 @@ class DataGenerator(Sequence):
         """take a list of ids of images as well as their indexes and returns the corresponding batch to feed
         the network"""
         # get the images/masks from the files
-        images_paths = ((self.main_data_directory if index < self.main_indexes_limit
-                         else self.secondary_data_directoy) / image_id / "images" / (image_id + ".png")
+        images_paths = ((self.main_data_directory / image_id / "images" / (image_id + ".png"))
+                        if index < self.main_indexes_limit else
+                        (self.secondary_data_directoy / image_id / "images" / (image_id + ".tif"))
                         for index, image_id in zip(indexes, ids_list_subset))
 
         images = (cv2.imread(str(image_path)) for image_path in images_paths)
