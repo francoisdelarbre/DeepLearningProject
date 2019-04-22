@@ -24,9 +24,10 @@ parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
                                                                    'dir if different from model')
 parser.add_argument('--model', default='fc-densenet', type=str, help='neural network to use',
-                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet', 'unet_resnext', 'unet_resnet50'])
+                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet', 'unet_resnext', 'unet_resnet50', 'deeplab'])
 parser.add_argument('--optimizer', default='adam', type=str, choices=['adam', 'rmsprop'], help='optimizer to use')
 parser.add_argument('--num_epochs', default=150, type=int, help='number of epochs')
+
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
 parser.add_argument('--main_data_dir', default='data/stage1_train', type=str, help='directory containing the principal '
                                                                                    'dataset')
@@ -117,7 +118,7 @@ if __name__ == "__main__":
                                   mobilenet_upsampling=True)
     elif args.model == 'vailla_unet':
         output = unet_model(inputs, num_classes, 64)
-    elif args.model == 'Deeplabv3':
+    elif args.model == 'deeplab':
         model = Deeplabv3(input_shape=(args.input_size, args.input_size, args.nbr_channels), classes=2)
     else:
         raise ValueError("invalid model")
