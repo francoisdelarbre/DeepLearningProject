@@ -69,6 +69,7 @@ if __name__ == "__main__":
     output = unet_mobilenetv2(inputs, len(out_masks), shape=(args.input_size, args.input_size, args.nbr_channels),
                               mobilenet_upsampling=True)
     model = Model(inputs=inputs, outputs=output)
+
     if "weight_mask" in out_masks:
         model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss_unet, metrics=[i_o_u_metric_unet])
         tensorboard_labels = tensorboard_labels[:, :, :, :-1]
