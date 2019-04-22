@@ -18,6 +18,7 @@ from models.vanilla_unet import unet_model
 from models.unet_resnext import unet_resnext
 from models.unet_resnet50 import unet_resnet50
 
+from models.deeplab_v3 import Deeplabv3
 
 parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
@@ -101,6 +102,8 @@ if __name__ == "__main__":
 
     inputs = Input(shape=(input_size, input_size, args.nbr_channels))
 
+    num_classes = len(out_masks) - (1 if 'weight_mask' in out_masks else 0)
+    model = None
     if args.model == 'fc-densenet':
         fcdensenet = FCDenseNet(growth_rate=args.fcdensenet_growth_rate) if args.fcdensenet_num_channels == 0 else \
             FCDenseNet(num_channels=[args.fcdensenet_num_channels]*6, growth_rate=args.fcdensenet_growth_rate)
@@ -114,10 +117,13 @@ if __name__ == "__main__":
                                   mobilenet_upsampling=True)
     elif args.model == 'vailla_unet':
         output = unet_model(inputs, num_classes, 64)
+    elif args.model == 'Deeplabv3':
+        model = Deeplabv3(input_shape=(args.input_size, args.input_size, args.nbr_channels), classes=2)
     else:
         raise ValueError("invalid model")
-
-    model = Model(inputs=inputs, outputs=output)
+    
+    if model is None:
+        model = Model(inputs=inputs, outputs=output)
 
     if args.optimizer == 'adam':
         optimizer = Adam(lr=0.00008)
