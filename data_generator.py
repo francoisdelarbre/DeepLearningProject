@@ -12,15 +12,18 @@ import albumentations as A
 
 class RandomSizedCropLargerImages(RandomSizedCrop):
     def apply(self, img, crop_height=0, crop_width=0, h_start=0, w_start=0, pad_value=0., *args, **kwargs):
-        height, width = img.shape[:2]
-        if height < crop_height or width < crop_width:
-            pad_h = max(crop_height - height, 0)
-            pad_w = max(crop_width - width, 0)
-            img = cv2.copyMakeBorder(img, 0, pad_h, 0,
-                                 pad_w, cv2.BORDER_CONSTANT,
-                                 value=pad_value)  # if gt label, pad_value should be ignore index.
+        img = pad_if_too_small(img, crop_height, crop_width, pad_value)
         return super(RandomSizedCropLargerImages, self).apply(img, crop_height, crop_width, h_start, w_start, *args, **kwargs)
     
+def pad_if_too_small(image, crop_height=0, crop_width=0, pad_value=0.):
+    height, width = image.shape[:2]
+    if height < crop_height or width < crop_width:
+        pad_h = max(crop_height - height, 0)
+        pad_w = max(crop_width - width, 0)
+        image = cv2.copyMakeBorder(image, 0, pad_h, 0,
+                                pad_w, cv2.BORDER_CONSTANT,
+                                value=pad_value)  # if gt label, pad_value should be ignore index.
+    return image
 
 def get_5_crops_gen(resolution):
     """returns a get_5_crops function with the corresponding resolution"""
@@ -31,6 +34,8 @@ def get_5_crops_gen(resolution):
         processed_images = []
         processed_masks = []
         for image, mask in zip(images, masks):
+            image = pad_if_too_small(image, resolution, resolution)
+            mask = pad_if_too_small(mask, resolution, resolution)
             img_size = image.shape
             for crop_idx in [(0, resolution, 0, resolution),
                              (0, resolution, -resolution, img_size[1]),
