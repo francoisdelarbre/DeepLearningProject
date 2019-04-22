@@ -1,25 +1,6 @@
 from tensorflow.keras.layers import BatchNormalization, Conv2D, MaxPooling2D, Conv2DTranspose, Concatenate
 
 
-def conv_block(num_channels, starts_with_batchnorm=True, ends_with_batchnorm=True):
-    """function that build a conv_block composed of 1+starts_with_batchnorm+ends_with_batchnorm batchnorms layers
-    and 2 conv layers
-    :param num_channels: the number of channels outputted by the convolutions
-    :param starts_with_batchnorm: whether we start with a batch normalization layer or not
-    :param ends_with_batchnorm: whether we end with a batch normalization layer or not
-    :returns: a function representing the block"""
-    def block_fct(x):
-        if starts_with_batchnorm:
-            x = BatchNormalization()(x)
-        x = Conv2D(num_channels, kernel_size=3, padding='SAME', activation='relu')(x)
-        x = BatchNormalization()(x)
-        x = Conv2D(num_channels, kernel_size=3, padding='SAME', activation='relu')(x)
-        if ends_with_batchnorm:
-            x = BatchNormalization()(x)
-        return x
-    return block_fct
-
-
 def unet_model(inputs, num_classes, num_channels_128):
     """function that builds a UNet-like model taking the inputs as arguments"""
     num_channels_64 = num_channels_128 * 2
@@ -43,3 +24,23 @@ def unet_model(inputs, num_classes, num_channels_128):
     output = Conv2D(num_classes, kernel_size=1, activation="sigmoid")(x_128_up)
 
     return output
+
+
+def conv_block(num_channels, starts_with_batchnorm=True, ends_with_batchnorm=True):
+    """function that build a conv_block composed of 1+starts_with_batchnorm+ends_with_batchnorm batchnorms layers
+    and 2 conv layers
+    :param num_channels: the number of channels outputted by the convolutions
+    :param starts_with_batchnorm: whether we start with a batch normalization layer or not
+    :param ends_with_batchnorm: whether we end with a batch normalization layer or not
+    :returns: a function representing the block"""
+    def block_fct(x):
+        if starts_with_batchnorm:
+            x = BatchNormalization()(x)
+        x = Conv2D(num_channels, kernel_size=3, padding='SAME', activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(num_channels, kernel_size=3, padding='SAME', activation='relu')(x)
+        if ends_with_batchnorm:
+            x = BatchNormalization()(x)
+        return x
+    return block_fct
+

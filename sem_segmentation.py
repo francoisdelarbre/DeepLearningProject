@@ -1,6 +1,6 @@
 from datetime import datetime
 from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, RMSprop
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.layers import Input
 from pathlib import Path
@@ -8,10 +8,11 @@ import argparse
 import json
 
 from data_generator import DataGenerator
+from utils import split_train_val
 from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet
 from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
-from utils import split_train_val
+from models.FCDenseNet103 import fc_densenet103
 from models.vanilla_unet import unet_model
 
 
@@ -19,7 +20,11 @@ parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
                                                                    'dir if different from model')
 parser.add_argument('--num_epochs', default=150, type=int, help='number of epochs')
-parser.add_argument('--input_size', default=128, type=int, help='width/height of the input')
+parser.add_argument('--input_size', default=128, type=int,
+                    help='width/height of the input, used for networks with variable input size '
+                         '(unet_mobilenet/vanilla_unet)')
+parser.add_argument('--model', default='fc-densenet', type=str, help='neural network to use',
+                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet'])
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
 parser.add_argument('--main_data_dir', default='data/stage1_train', type=str, help='directory containing the principal '
                                                                                    'dataset')
@@ -37,6 +42,7 @@ parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type
 parser.add_argument('--non_border_cells_weights', default=30, type=int,
                     help="if 'weight_mask' in output_masks: the weight to give to non_border_cells pixels (border cells"
                          " pixels have a weight of 255)")
+parser.add_argument('--optimizer', default='adam', type=str, choices=['adam', 'rmsprop'], help='optimizer to use')
 
 args = parser.parse_args()
 
@@ -55,26 +61,47 @@ if __name__ == "__main__":
         data_dirs = (args.main_data_dir, args.sec_data_dir)
         ids_list_train = (ids_list_train, None)  # uses all the extra set as training data
 
+    if args.model == 'fc-densenet':
+        input_size = 224
+    else:
+        input_size = args.input_size
+
     train_gen = DataGenerator(data_dirs, output_masks=out_masks, batch_size=args.batch_size,
-                              resolution=args.input_size, performs_data_augmentation=True, ids_list=ids_list_train,
+                              resolution=input_size, performs_data_augmentation=True, ids_list=ids_list_train,
                               sec_data_dir_factor=args.sec_data_dir_factor)
 
     val_batch_size = args.batch_size // 5 + 1  # // 5 + 1 because we will perform validation on 5 crops (4 corners +
     # center)
     val_gen = DataGenerator((args.main_data_dir,), output_masks=out_masks, batch_size=val_batch_size,
-                            resolution=args.input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
+                            resolution=input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
     tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
 
-    inputs = Input(shape=(args.input_size, args.input_size, args.nbr_channels))
-    output = unet_mobilenetv2(inputs, len(out_masks), shape=(args.input_size, args.input_size, args.nbr_channels),
-                              mobilenet_upsampling=True)
+    inputs = Input(shape=(input_size, input_size, args.nbr_channels))
+    num_classes = len(out_masks) - (1 if 'weight_mask' in out_masks else 0)
+    if args.model == 'fc-densenet':
+        output = fc_densenet103(inputs, num_classes)
+    elif args.model == 'unet_mobilenet':
+        output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
+                                  mobilenet_upsampling=True)
+    elif args.model == 'vailla_unet':
+        output = unet_model(inputs, num_classes, 64)
+    else:
+        raise ValueError("invalid model")
+
     model = Model(inputs=inputs, outputs=output)
 
+    if args.optimizer == 'adam':
+        optimizer = Adam(lr=0.00008)
+    elif args.optimizer == 'rmsprop':
+        optimizer = RMSprop(lr=1e-3, decay=0.995)
+    else:
+        raise ValueError("invalid optimizer")
+
     if "weight_mask" in out_masks:
-        model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss_unet, metrics=[i_o_u_metric_unet])
+        model.compile(optimizer=optimizer, loss=bce_dice_loss_unet, metrics=[i_o_u_metric_unet])
         tensorboard_labels = tensorboard_labels[:, :, :, :-1]
     else:
-        model.compile(optimizer=Adam(lr=0.00008), loss=bce_dice_loss, metrics=[i_o_u_metric])
+        model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=[i_o_u_metric])
 
     model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir, write_graph=False),

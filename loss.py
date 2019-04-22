@@ -34,8 +34,6 @@ def bce_dice_loss_unet(y_true, y_pred, weight=0.9, axis=(1, 2), smooth=1.):
 
     weight_map = y_true[:, :, :, -1:]
     y_true = y_true[:, :, :, :-1]
-    y_pred = y_pred[:, :, :, :-1]  # needed because keras forces for god knows what reason y_pred to have the same
-    # shape as y_true
 
     normalize_weight_map = tf.reduce_mean(weight_map)
 
@@ -58,4 +56,4 @@ def bce_dice_loss_unet(y_true, y_pred, weight=0.9, axis=(1, 2), smooth=1.):
 
 def i_o_u_metric_unet(y_true, y_pred):
     """iou metric for which we do not take the weight_masks into account"""
-    return i_o_u_metric(y_true[:, :, :, :-1], y_pred[:, :, :, :-1])
+    return i_o_u_metric(y_true[:, :, :, :-1], y_pred)
