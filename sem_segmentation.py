@@ -1,8 +1,9 @@
 from datetime import datetime
-from keras.models import Model
-from keras.optimizers import Adam, RMSprop
-from keras.callbacks import TensorBoard
-from keras.layers import Input
+
+from tensorflow.compat.v1.keras.models import Model
+from tensorflow.compat.v1.keras.optimizers import Adam
+from tensorflow.compat.v1.keras.callbacks import TensorBoard
+from tensorflow.compat.v1.keras.layers import Input
 from pathlib import Path
 import argparse
 import json

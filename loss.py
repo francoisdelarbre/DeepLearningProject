@@ -1,6 +1,7 @@
 """losses used throughout the project"""
-import tensorflow as tf
-from keras.losses import binary_crossentropy
+
+import tensorflow.compat.v1 as tf
+from tensorflow.compat.v1.keras.losses import binary_crossentropy
 
 
 def dice_loss(y_true, y_pred, axis=(1, 2), smooth=1.):
