@@ -12,7 +12,7 @@ from utils import split_train_val
 from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet
 from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
-from models.FCDenseNet103 import fc_densenet103
+from models.FCDenseNet import FCDenseNet
 from models.vanilla_unet import unet_model
 
 
@@ -74,12 +74,12 @@ if __name__ == "__main__":
     # center)
     val_gen = DataGenerator((args.main_data_dir,), output_masks=out_masks, batch_size=val_batch_size,
                             resolution=input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
-    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
+    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17])
 
     inputs = Input(shape=(input_size, input_size, args.nbr_channels))
     num_classes = len(out_masks) - (1 if 'weight_mask' in out_masks else 0)
     if args.model == 'fc-densenet':
-        output = fc_densenet103(inputs, num_classes)
+        output = FCDenseNet().compute_output(inputs, num_classes)
     elif args.model == 'unet_mobilenet':
         output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
                                   mobilenet_upsampling=True)
