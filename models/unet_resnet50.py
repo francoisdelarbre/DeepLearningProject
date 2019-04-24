@@ -48,6 +48,24 @@ def unet_resnet50(inputs, num_classes, shape):
     return output
 
 
+def stack_with_upsampling(x, filters, blocks, up_stride_last=2, name=None):
+    """A set of stacked residual blocks.
+    # Arguments
+        x: input tensor.
+        filters: integer, filters of the bottleneck layer in a block.
+        blocks: integer, blocks in the stacked blocks.
+        up_stride_last: default 2, stride of the first layer in the last block, a stride > 1 means upsampling
+        name: string, stack label.
+    # Returns
+        Output tensor for the stacked blocks.
+    """
+    x = block(x, filters, name=name + '_block1')
+    for i in range(2, blocks):
+        x = block(x, filters, conv_shortcut=False, name=name + '_block' + str(i))
+    x = block(x, filters, up_stride=up_stride_last, name=name + '_block' + str(blocks))
+    return x
+
+
 def block(x, filters, kernel_size=3, up_stride=1, conv_shortcut=True, name=None):
     """A residual block.
     # Arguments
@@ -77,7 +95,7 @@ def block(x, filters, kernel_size=3, up_stride=1, conv_shortcut=True, name=None)
         x = layers.Conv2D(filters, 1, name=name + '_1_conv')(x)
     else:
         x = layers.Conv2DTranspose(filters, 1, strides=up_stride, use_bias=False,
-                                   padding='same', name=name + '_0_conv')(x)
+                                   padding='same', name=name + '_1_conv')(x)
     x = layers.BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name=name + '_1_bn')(x)
     x = layers.Activation('relu', name=name + '_1_relu')(x)
 
@@ -90,22 +108,4 @@ def block(x, filters, kernel_size=3, up_stride=1, conv_shortcut=True, name=None)
 
     x = layers.Add(name=name + '_add')([shortcut, x])
     x = layers.Activation('relu', name=name + '_out')(x)
-    return x
-
-
-def stack_with_upsampling(x, filters, blocks, up_stride_last=2, name=None):
-    """A set of stacked residual blocks.
-    # Arguments
-        x: input tensor.
-        filters: integer, filters of the bottleneck layer in a block.
-        blocks: integer, blocks in the stacked blocks.
-        up_stride_last: default 2, stride of the first layer in the last block, a stride > 1 means upsampling
-        name: string, stack label.
-    # Returns
-        Output tensor for the stacked blocks.
-    """
-    x = block(x, filters, name=name + '_block1')
-    for i in range(2, blocks):
-        x = block(x, filters, conv_shortcut=False, name=name + '_block' + str(i))
-    x = block(x, filters, up_stride=up_stride_last, name=name + '_block' + str(blocks))
     return x
