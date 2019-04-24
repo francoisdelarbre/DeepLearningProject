@@ -40,7 +40,7 @@ def unet_resnet50(inputs, num_classes, shape):
     x_112_up = Concatenate()([encoder_112, x_112_up])
     x_112_up = stack_with_upsampling(x_112_up, num_channels[0], num_blocks[0], up_stride_last=1, name='conv1up')
 
-    x_224_up = stack_with_upsampling(x_112_up, num_channels[0], 2, up_stride_last=1, name='conv0up')  # added 2 blocks
+    x_224_up = stack_with_upsampling(x_112_up, num_channels[0], 2, up_stride_last=2, name='conv0up')  # added 2 blocks
     # at the end to process these images as well
 
     output = Conv2D(num_classes, kernel_size=1, activation="sigmoid")(x_224_up)
