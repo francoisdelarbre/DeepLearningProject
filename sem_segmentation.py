@@ -33,7 +33,7 @@ parser.add_argument('--sec_data_dir', default='data/extra_data', type=str,
                          '"" if only the main dataset is to be used')
 parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
-parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
+parser.add_argument('--out_masks', default='["union_mask"]', type=str,
                     help='output masks as a json string, weight mask should be the last if it is present')
 
 # parameters that are unrelevant for some choices of the other parameters
@@ -81,14 +81,16 @@ if __name__ == "__main__":
 
     val_batch_size = args.batch_size // 5 + 1  # // 5 + 1 because we will perform validation on 5 crops (4 corners +
     # center)
-    val_gen = DataGenerator((args.main_data_dir,), output_masks=out_masks, batch_size=val_batch_size,
-                            resolution=input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
-    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
+    if args.train_prop != 1.:
+        val_gen = DataGenerator((args.main_data_dir,), output_masks=out_masks, batch_size=val_batch_size,
+                                resolution=input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
+        tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
 
     if 'weight_mask' in out_masks:
         num_classes = len(out_masks) - 1
         loss = bce_dice_loss_unet
-        tensorboard_labels = tensorboard_labels[:, :, :, :-1]
+        if args.train_prop != 1.:
+            tensorboard_labels = tensorboard_labels[:, :, :, :-1]
     else:
         num_classes = len(out_masks)
         loss = bce_dice_loss
@@ -124,10 +126,15 @@ if __name__ == "__main__":
         raise ValueError("invalid optimizer")
 
     model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=metrics)
-    model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, validation_data=val_gen, callbacks=[
-        TensorBoard(log_dir=log_dir, write_graph=False),
-        TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
-                                   model=model, log_dir=log_dir / 'img')])
+
+    if args.train_prop == 1.:
+        model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, callbacks=[
+            TensorBoard(log_dir=log_dir, write_graph=False)])
+    else:
+        model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, validation_data=val_gen, callbacks=[
+            TensorBoard(log_dir=log_dir, write_graph=False),
+            TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
+                                       model=model, log_dir=log_dir / 'img')])
 
     model.save(str(Path('h5_files') / (args.save_file + '.h5')))
 
