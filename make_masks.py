@@ -3,7 +3,7 @@ import cv2
 import os
 from pathlib import Path
 
-PATH = 'data/stage1_train'  # path to the training set
+PATH = 'data/extra_data'  # path to the training set
 KERNEL_SIZE = 3
 
 if __name__ == "__main__":
@@ -51,6 +51,8 @@ if __name__ == "__main__":
         border_mask[border_mask == 1] = 0
         border_mask[border_mask > 1] = 1
 
+        union_mask[union_mask > 1] = 1
+
         dir_name = Path(PATH) / sample / 'processed_masks'
 
         if not os.path.exists(str(dir_name)):
@@ -59,7 +61,7 @@ if __name__ == "__main__":
         union_mask = np.uint8(union_mask) * 255
         border_mask = np.uint8(border_mask) * 255
         weight_mask = np.uint8(weight_mask) * 255
-        #cv2.imwrite(str(dir_name / 'union_mask.png'), union_mask)
+        # cv2.imwrite(str(dir_name / 'union_mask.png'), union_mask)
         #cv2.imwrite(str(dir_name / 'border_mask.png'), border_mask)
         #cv2.imwrite(str(dir_name / 'weight_mask.png'), weight_mask)
         cv2.imwrite(str(dir_name / 'center_mask.png'), center_mask)
