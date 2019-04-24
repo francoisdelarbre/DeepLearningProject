@@ -17,37 +17,35 @@ def unet_resnet50(inputs, num_classes, shape):
     encoder = ResNet50(include_top=False, weights='imagenet', input_tensor=inputs, input_shape=shape, pooling=None,
                        backend=backend, layers=layers, models=models, utils=utils)
     num_blocks = [3, 4, 6, 3]
-    print(encoder.summary())
-    # encoder_14 = encoder.get_layer('conv4_block6_out').output
-    #
-    #
-    # num_channels = [32, 64, 128, 256, 512]
-    # encoder_112 = encoder.get_layer('conv1_relu').output
-    # encoder_56 = encoder.get_layer('conv2_block3_out').output
-    # encoder_28 = encoder.get_layer('conv3_block4_out').output
-    # encoder_end = encoder.get_layer('conv5_block3_out').output
-    #
-    # # upsampling
-    # x_14_up = stack_with_upsampling(encoder_end, num_channels[4], num_blocks[3], name='conv5up')
-    #
-    # x_14_up = Concatenate()([encoder_14, x_14_up])
-    # x_28_up = stack_with_upsampling(x_14_up, num_channels[3], num_blocks[2], name='conv4up')
-    #
-    # x_28_up = Concatenate()([encoder_28, x_28_up])
-    # x_56_up = stack_with_upsampling(x_28_up, num_channels[2], num_blocks[1], name='conv3up')
-    #
-    # x_56_up = Concatenate()([encoder_56, x_56_up])
-    # x_112_up = stack_with_upsampling(x_56_up, num_channels[1], num_blocks[0], name='conv2up')
-    #
-    # x_112_up = Concatenate()([encoder_112, x_112_up])
-    # x_112_up = stack_with_upsampling(x_112_up, num_channels[0], num_blocks[0], up_stride_last=1, name='conv1up')
-    #
-    # x_224_up = stack_with_upsampling(x_112_up, num_channels[0], 2, up_stride_last=1, name='conv0up')  # added 2 blocks
-    # # at the end to process these images as well
-    #
-    # output = Conv2D(num_classes, kernel_size=1, activation="sigmoid")(x_224_up)
-    #
-    # return output
+
+    num_channels = [64, 64, 128, 256, 512]
+    encoder_112 = encoder.get_layer('conv1_relu').output
+    encoder_56 = encoder.get_layer('conv2_block3_out').output
+    encoder_28 = encoder.get_layer('conv3_block4_out').output
+    encoder_14 = encoder.get_layer('conv4_block6_out').output
+    encoder_end = encoder.get_layer('conv5_block3_out').output
+
+    # upsampling
+    x_14_up = stack_with_upsampling(encoder_end, num_channels[4], num_blocks[3], name='conv5up')
+
+    x_14_up = Concatenate()([encoder_14, x_14_up])
+    x_28_up = stack_with_upsampling(x_14_up, num_channels[3], num_blocks[2], name='conv4up')
+
+    x_28_up = Concatenate()([encoder_28, x_28_up])
+    x_56_up = stack_with_upsampling(x_28_up, num_channels[2], num_blocks[1], name='conv3up')
+
+    x_56_up = Concatenate()([encoder_56, x_56_up])
+    x_112_up = stack_with_upsampling(x_56_up, num_channels[1], num_blocks[0], name='conv2up')
+
+    x_112_up = Concatenate()([encoder_112, x_112_up])
+    x_112_up = stack_with_upsampling(x_112_up, num_channels[0], num_blocks[0], up_stride_last=1, name='conv1up')
+
+    x_224_up = stack_with_upsampling(x_112_up, num_channels[0], 2, up_stride_last=1, name='conv0up')  # added 2 blocks
+    # at the end to process these images as well
+
+    output = Conv2D(num_classes, kernel_size=1, activation="sigmoid")(x_224_up)
+
+    return output
 
 
 def block(x, filters, kernel_size=3, up_stride=1, conv_shortcut=True, name=None):
