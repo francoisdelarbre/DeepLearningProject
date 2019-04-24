@@ -104,7 +104,7 @@ if __name__ == "__main__":
         output = fcdensenet.compute_output(inputs, num_classes)
     elif args.model == 'unet_resnext':
         output = unet_resnext(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels), depth_is_50=True)
-    elif args.models == 'unet_resnet50':
+    elif args.model == 'unet_resnet50':
         output = unet_resnet50(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels))
     elif args.model == 'unet_mobilenet':
         output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
