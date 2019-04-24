@@ -16,11 +16,10 @@ def wattershed_transform(union_mask):
     tmps = union_mask.copy()
     dist_transform = cv2.distanceTransform(tmps, cv2.DIST_L2, 5)
 
-
-    # find big blop in the images, we try to separate each blop with wattershed
+    # find big blop in the images, we try to separate each blop with watershed
     tmps = np.uint8(tmps)
     ret, blops = cv2.connectedComponents(tmps)
-    blops += 1  # background is 1, 0 will be for the zone to flood by wattershed
+    blops += 1  # background is 1, 0 will be for the zone to flood by watershed
 
     # matrix of the sure foreground, it will serve as marker
     sure_fg = cv2.subtract(dist_transform, dist_transform)
@@ -131,8 +130,8 @@ if __name__ == "__main__":
 
     borders = cv2.imread(PATH+'border_mask.png')
     borders = cv2.cvtColor(borders, cv2.COLOR_BGR2GRAY)
-    wattershed_transform(gray_mask.copy())
-    wattershed_transform_border(gray_mask.copy(), borders.copy())
+    watershed_transform(gray_mask.copy())
+    watershed_transform_border(gray_mask.copy(), borders.copy())
 
 
 

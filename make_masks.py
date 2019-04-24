@@ -3,14 +3,15 @@ import cv2
 import os
 from pathlib import Path
 
-PATH = 'data/extra_data'  # path to the training set
+PATH = 'data/stage1_train'  # path to the training set
 KERNEL_SIZE = 3
 
 if __name__ == "__main__":
     """creates several new files containing different masks to train the model:
         - union_mask: union of the masks corresponding to each cell
         - border_mask: mask that is equal to 1 when two different cells touch one another
-        - weight_mask: mask that is equal to 1 on the border of each cell to weight these points more heavily"""
+        - weight_mask: mask that is equal to 1 on the border of each cell to weight these points more heavily
+        - center_mask: mask that is equal to 1 on the centers of the cells and 0 otherwise"""
 
     kernel = np.ones((KERNEL_SIZE, KERNEL_SIZE), np.uint8)  # kernel fot the dilation
     img_list = os.listdir(PATH)  # list of training images
@@ -26,11 +27,12 @@ if __name__ == "__main__":
         union_mask = np.zeros(based_img.shape).astype("float")
         border_mask = np.zeros(based_img.shape).astype("float")
         weight_mask = np.zeros(based_img.shape).astype("float")
+        center_mask = np.zeros(based_img.shape).astype("float")
 
         for mask in masks_list:  # iterate over the masks of the image
             path_to_mask = str(Path(path_to_masks) / mask)  # path to the current mask
-            img = cv2.imread(path_to_mask, cv2.IMREAD_GRAYSCALE)  # load the mask
-            img = img.astype("float") / 255
+            img_uint8 = cv2.imread(path_to_mask, cv2.IMREAD_GRAYSCALE)  # load the mask
+            img = img_uint8.astype("float") / 255
 
             union_mask = union_mask + img
 
@@ -39,6 +41,12 @@ if __name__ == "__main__":
 
             boundary = img - cv2.erode(img, kernel, iterations=1)
             weight_mask += boundary
+
+            dist_transform = cv2.distanceTransform(img_uint8, cv2.DIST_L2, 5)
+            maxValue = np.max(dist_transform)
+            dist_transform[dist_transform <= 0.7 * maxValue] = 0
+            dist_transform[dist_transform > 0.7 * maxValue] = 255
+            center_mask += dist_transform
 
         border_mask[border_mask == 1] = 0
         border_mask[border_mask > 1] = 1
@@ -51,6 +59,7 @@ if __name__ == "__main__":
         union_mask = np.uint8(union_mask) * 255
         border_mask = np.uint8(border_mask) * 255
         weight_mask = np.uint8(weight_mask) * 255
-        cv2.imwrite(str(dir_name / 'union_mask.png'), union_mask)
-        cv2.imwrite(str(dir_name / 'border_mask.png'), border_mask)
-        cv2.imwrite(str(dir_name / 'weight_mask.png'), weight_mask)
+        #cv2.imwrite(str(dir_name / 'union_mask.png'), union_mask)
+        #cv2.imwrite(str(dir_name / 'border_mask.png'), border_mask)
+        #cv2.imwrite(str(dir_name / 'weight_mask.png'), weight_mask)
+        cv2.imwrite(str(dir_name / 'center_mask.png'), center_mask)

@@ -51,9 +51,6 @@ parser.add_argument('--fcdensenet_num_channels', default=0, type=int,
                          "fc-densenet103 instead, to be ignored if model isn't densenet")
 parser.add_argument('--fcdensenet_growth_rate', default=16, type=int,
                     help="growth factor to use, to be ignored if model isn't fc-densenet")
-parser.add_argument('--resnext50', default=True, type=bool,
-                    help="wether to use resnext50 (otherwise will use resnext101), "
-                         "to be ignored if model isn't unet_resnext")
 parser.add_argument('--resnext101', action='store_true', help="wether to use resnext101 instead of resnext50 "
                                                               "to be ignored if model isn't unet_resnext")
 
@@ -108,7 +105,7 @@ if __name__ == "__main__":
         output = fcdensenet.compute_output(inputs, num_classes)
     elif args.model == 'unet_resnext':
         output = unet_resnext(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
-                              depth_is_50=not args.resnext50)
+                              depth_is_50=not args.resnext101)
     elif args.model == 'unet_mobilenet':
         output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
                                   mobilenet_upsampling=True)
