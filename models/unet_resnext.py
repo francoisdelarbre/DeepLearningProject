@@ -100,18 +100,17 @@ def block(x, filters, kernel_size=3, up_stride=1, groups=32, conv_shortcut=True,
     else:
         shortcut = x
 
-    x = layers.Conv2D(filters, 1, use_bias=False, name=name + '_1_conv')(x)
+    if up_stride == 1:
+        x = layers.Conv2D(filters, 1, use_bias=False, name=name + '_1_conv')(x)
+    else:
+        x = layers.Conv2DTranspose(filters, 1, strides=up_stride, use_bias=False,
+                                   padding='same', name=name + '_1_conv')(x)
     x = layers.BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name=name + '_1_bn')(x)
     x = layers.Activation('relu', name=name + '_1_relu')(x)
 
     c = filters // groups
-    if up_stride == 1:
-        x = layers.ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + '_2_pad')(x)
-        x = layers.DepthwiseConv2D(kernel_size, depth_multiplier=c, use_bias=False, name=name + '_2_conv')(x)
-    else:  # unfortunately, DepthwiseConv2DTranspose layers do not exist as of now in tensoflow, it does in pytorch
-        # though torch.nn.ConvTranspose2d (argument groups)
-        x = layers.Conv2DTranspose(c * backend.int_shape(x)[bn_axis], kernel_size, strides=up_stride, use_bias=False,
-                                   padding='same', name=name + '_2_conv')(x)
+    x = layers.ZeroPadding2D(padding=((1, 1), (1, 1)), name=name + '_2_pad')(x)
+    x = layers.DepthwiseConv2D(kernel_size, depth_multiplier=c, use_bias=False, name=name + '_2_conv')(x)
     x_shape = backend.int_shape(x)[1:-1]
     x = layers.Reshape(x_shape + (groups, c, c))(x)
     output_shape = x_shape + (groups, c) if backend.backend() == 'theano' else None
