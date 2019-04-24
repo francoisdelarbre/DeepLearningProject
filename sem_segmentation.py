@@ -70,7 +70,7 @@ if __name__ == "__main__":
         data_dirs = (args.main_data_dir, args.sec_data_dir)
         ids_list_train = (ids_list_train, None)  # uses all the extra set as training data
 
-    if args.model == 'fc-densenet' or args.model == 'unet_resnext':
+    if args.model == 'fc-densenet' or args.model == 'unet_resnext' or args.model == 'unet_resnet50':
         input_size = 224
     else:
         input_size = args.input_size
