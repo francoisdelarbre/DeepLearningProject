@@ -3,7 +3,7 @@ https://github.com/keras-team/keras-applications/blob/master/keras_applications/
 use it for the encoder and we need to get the names of the output channels right and for the auxiliary functions which
 were basically copied"""
 from keras.layers import Conv2D, Concatenate
-from keras_applications.resnext import ResNet50
+from keras_applications.resnet import ResNet50
 import keras.backend as backend
 import keras.layers as layers
 import keras.models as models
