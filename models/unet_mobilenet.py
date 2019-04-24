@@ -2,10 +2,10 @@
 https://github.com/keras-team/keras-applications/blob/master/keras_applications/mobilenet_v2.py, in particular since we
 use it for the encoder and we need to get the names of the output channels right and for the _make_divisible and
 _inverted_res_block functions"""
-from tensorflow.keras.layers import BatchNormalization, DepthwiseConv2D, Conv2D, MaxPooling2D, Conv2DTranspose, \
+from keras.layers import BatchNormalization, DepthwiseConv2D, Conv2D, MaxPooling2D, Conv2DTranspose, \
     Concatenate, Add, ReLU
-from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
-import tensorflow.keras.backend as keras_backend
+from keras.applications.mobilenet_v2 import MobileNetV2
+import keras.backend as keras_backend
 
 from .vanilla_unet import conv_block
 

@@ -15,13 +15,14 @@ from models.unet_mobilenet import unet_mobilenetv2
 from models.FCDenseNet import FCDenseNet
 from models.vanilla_unet import unet_model
 from models.unet_resnext import unet_resnext
+from models.unet_resnet50 import unet_resnet50
 
 
 parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
                                                                    'dir if different from model')
 parser.add_argument('--model', default='fc-densenet', type=str, help='neural network to use',
-                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet', 'unet_resnext'])
+                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet', 'unet_resnext', 'unet_resnet50'])
 parser.add_argument('--optimizer', default='adam', type=str, choices=['adam', 'rmsprop'], help='optimizer to use')
 parser.add_argument('--num_epochs', default=150, type=int, help='number of epochs')
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
@@ -51,8 +52,6 @@ parser.add_argument('--fcdensenet_num_channels', default=0, type=int,
                          "fc-densenet103 instead, to be ignored if model isn't densenet")
 parser.add_argument('--fcdensenet_growth_rate', default=16, type=int,
                     help="growth factor to use, to be ignored if model isn't fc-densenet")
-parser.add_argument('--resnext101', action='store_true', help="wether to use resnext101 instead of resnext50 "
-                                                              "to be ignored if model isn't unet_resnext")
 
 args = parser.parse_args()
 
@@ -104,8 +103,9 @@ if __name__ == "__main__":
             FCDenseNet(num_channels=[args.fcdensenet_num_channels]*6, growth_rate=args.fcdensenet_growth_rate)
         output = fcdensenet.compute_output(inputs, num_classes)
     elif args.model == 'unet_resnext':
-        output = unet_resnext(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
-                              depth_is_50=not args.resnext101)
+        output = unet_resnext(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels), depth_is_50=True)
+    elif args.models == 'unet_resnet50':
+        output = unet_resnet50(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels))
     elif args.model == 'unet_mobilenet':
         output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
                                   mobilenet_upsampling=True)

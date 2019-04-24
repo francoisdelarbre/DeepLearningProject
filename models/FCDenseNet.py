@@ -1,10 +1,10 @@
 """FC-DenseNet103 model, as described in http://arxiv.org/abs/1611.09326, when in doubt with the details of the paper,
 we inspired ourselves from the official implementation https://github.com/SimJeg/FC-DenseNet. When in doubt between the
 paper and the implementation, we followed the implementation"""
-from tensorflow.keras.layers import BatchNormalization, Conv2D, MaxPooling2D, Conv2DTranspose, \
+from keras.layers import BatchNormalization, Conv2D, MaxPooling2D, Conv2DTranspose, \
     Concatenate, ReLU, Dropout
-import tensorflow.keras.backend as keras_backend
-from tensorflow.keras.regularizers import l2
+import keras.backend as keras_backend
+from keras.regularizers import l2
 
 
 class FCDenseNet:
