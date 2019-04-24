@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.utils import Sequence
+from keras.utils import Sequence
 
 from matplotlib import pyplot as plt
 from albumentations import Compose, RandomSizedCrop, OpticalDistortion, ElasticTransform, RandomRotate90, \
@@ -123,10 +123,15 @@ class DataGenerator(Sequence):
         return self.__data_generation(indexes, ids_list_subset)
 
     def get_some_items(self, items):
-        """same as item but only gives back a single element of the first set (so )"""
+        """same as item but only gives back a single element of the first set"""
         indexes = self.indexes[items]
         id_item = self.ids_list[indexes]
-        return self.__data_generation(indexes, id_item)
+        imgs, labels = self.__data_generation(indexes, id_item)
+        if not self.performs_data_augmentation:  # in this case we returned the 5 crops whereas only the center crops
+            # were wanted
+            imgs = imgs[np.arange(2, len(items) * 5, 5), :, :, :]
+            labels = labels[np.arange(2, len(items) * 5, 5), :, :, :]
+        return imgs, labels
 
     def __data_generation(self, indexes, ids_list_subset):
         """take a list of ids of images as well as their indexes and returns the corresponding batch to feed

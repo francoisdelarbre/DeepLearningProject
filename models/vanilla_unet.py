@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import BatchNormalization, Conv2D, MaxPooling2D, Conv2DTranspose, Concatenate
+from keras.layers import BatchNormalization, Conv2D, MaxPooling2D, Conv2DTranspose, Concatenate
 
 
 def unet_model(inputs, num_classes, num_channels_128):

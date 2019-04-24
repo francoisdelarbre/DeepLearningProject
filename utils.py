@@ -7,6 +7,7 @@ import random
 
 FLOAT_TYPE = np.float32
 
+
 @njit(error_model='numpy', parallel=True, fastmath=True)
 def get_run_length_enc(array):
     """given a 2D float32 image of 0's and 1's, returns the run-length encoding of that array

@@ -8,7 +8,7 @@ from utils import split_train_val
 from pathlib import Path
 import numpy as np
 
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet
 from data_generator import DataGenerator
 
@@ -39,8 +39,7 @@ if __name__ == '__main__':
                             resolution=args.input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
 
     print("several images will be predicted, press 'ctrl-c' to quit or 'n' to show next image")
-    print("shows into the order: top: [in_img, pred_mask_1, pred_mask_2, ...], "
-          "bottom: [in_img, true_mask_1, true_mask_2]")
+    print("shows into the order: [in_img, pred_mask_1, pred_mask_2, ...], ")
 
     for img, mask in val_gen:
 
@@ -49,18 +48,17 @@ if __name__ == '__main__':
         mask = mask[crop_offset, :, :, :]
         pred_mask = model.predict(img)
 
-        line_1 = [img[0, :, :, :]]
-        line_2 = [img[0, :, :, :]]
+        line = [img[0, :, :, :]]
         for i in range(mask.shape[2]):
-            # turn grayscale to rgb
-            line_1.append(np.stack([(pred_mask[0, :, :, i] > 0.5).astype(np.float16)]*3, axis=-1))
-            line_2.append(np.stack([mask[:, :, i]] * 3, axis=-1))
+            # turn 2 grayscale images to one rgb
+            pred_and_label_masks = np.zeros((mask.shape[0], mask.shape[1], 3))
+            pred_and_label_masks[:, :, 0] = (pred_mask[0, :, :, i] > 0.5)
+            pred_and_label_masks[:, :, 2] = mask[:, :, i]
+            line.append(pred_and_label_masks)
 
-        line_1 = np.hstack(line_1)
-        line_2 = np.hstack(line_2)
-        img_to_plot = (np.vstack([line_1, line_2]) * 255).astype(np.uint8)
+        img_to_plot = (np.hstack(line) * 255).astype(np.uint8)
 
-        rescaling_factor = 512 / max(img_to_plot.shape[0], img_to_plot.shape[1])
+        rescaling_factor = 1024 / max(img_to_plot.shape[0], img_to_plot.shape[1])
         img_to_plot = cv2.resize(img_to_plot, None, fx=rescaling_factor, fy=rescaling_factor)
 
         cv2.imshow('img and predicted masks', img_to_plot)

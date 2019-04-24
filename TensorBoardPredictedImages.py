@@ -4,7 +4,7 @@ from PIL import Image
 import io
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.callbacks import Callback
+from keras.callbacks import Callback
 
 
 def make_image(image, label):
@@ -18,8 +18,10 @@ def make_image(image, label):
         image_with_label = np.zeros((height, width, 3), dtype=np.uint8)
         image_with_label[:, :, 0] = image[:, :, 0] * 255
         image_with_label[:, :, 2] = label[:, :, 0] * 255
-    else:
-        raise ValueError('image should be black and white')
+    else:  # only shows second mask
+        image_with_label = np.zeros((height, width, 3), dtype=np.uint8)
+        image_with_label[:, :, 0] = image[:, :, 1] * 255
+        image_with_label[:, :, 2] = label[:, :, 1] * 255
     pil_image = Image.fromarray(image_with_label)
     output = io.BytesIO()
     pil_image.save(output, format='PNG')

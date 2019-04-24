@@ -1,26 +1,27 @@
 from datetime import datetime
-from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam, RMSprop
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.layers import Input
+from keras.models import Model
+from keras.optimizers import Adam, RMSprop
+from keras.callbacks import TensorBoard
+from keras.layers import Input
 from pathlib import Path
 import argparse
 import json
 
 from data_generator import DataGenerator
 from utils import split_train_val
-from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet
+from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_first_mask, i_o_u_metric_second_mask
 from TensorBoardPredictedImages import TensorBoardPredictedImages
 from models.unet_mobilenet import unet_mobilenetv2
 from models.FCDenseNet import FCDenseNet
 from models.vanilla_unet import unet_model
+from models.unet_resnext import unet_resnext
 
 
 parser = argparse.ArgumentParser(description='Computing table')
 parser.add_argument('--save_file', default='model', type=str, help='file name of the model, also used as tensorboard '
                                                                    'dir if different from model')
 parser.add_argument('--model', default='fc-densenet', type=str, help='neural network to use',
-                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet'])
+                    choices=['fc-densenet', 'unet_mobilenet', 'vailla_unet', 'unet_resnext'])
 parser.add_argument('--optimizer', default='adam', type=str, choices=['adam', 'rmsprop'], help='optimizer to use')
 parser.add_argument('--num_epochs', default=150, type=int, help='number of epochs')
 parser.add_argument('--nbr_channels', default=3, type=int, help='number of channels')
@@ -50,6 +51,11 @@ parser.add_argument('--fcdensenet_num_channels', default=0, type=int,
                          "fc-densenet103 instead, to be ignored if model isn't densenet")
 parser.add_argument('--fcdensenet_growth_rate', default=16, type=int,
                     help="growth factor to use, to be ignored if model isn't fc-densenet")
+parser.add_argument('--resnext50', default=True, type=bool,
+                    help="wether to use resnext50 (otherwise will use resnext101), "
+                         "to be ignored if model isn't unet_resnext")
+parser.add_argument('--resnext101', action='store_true', help="wether to use resnext101 instead of resnext50 "
+                                                              "to be ignored if model isn't unet_resnext")
 
 args = parser.parse_args()
 
@@ -68,7 +74,7 @@ if __name__ == "__main__":
         data_dirs = (args.main_data_dir, args.sec_data_dir)
         ids_list_train = (ids_list_train, None)  # uses all the extra set as training data
 
-    if args.model == 'fc-densenet':
+    if args.model == 'fc-densenet' or args.model == 'unet_resnext':
         input_size = 224
     else:
         input_size = args.input_size
@@ -81,15 +87,28 @@ if __name__ == "__main__":
     # center)
     val_gen = DataGenerator((args.main_data_dir,), output_masks=out_masks, batch_size=val_batch_size,
                             resolution=input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))
-    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17])
+    tensorboard_imgs, tensorboard_labels = val_gen.get_some_items([-17, -9, -3])
+
+    if 'weight_mask' in out_masks:
+        num_classes = len(out_masks) - 1
+        loss = bce_dice_loss_unet
+        tensorboard_labels = tensorboard_labels[:, :, :, :-1]
+    else:
+        num_classes = len(out_masks)
+        loss = bce_dice_loss
+
+    metrics = [i_o_u_metric_first_mask] if num_classes == 1 else [i_o_u_metric_first_mask, i_o_u_metric_second_mask]
+    # i_o_u_metric_first_mask is the same as i_o_u_metric_unet so this handles the unet case as well
 
     inputs = Input(shape=(input_size, input_size, args.nbr_channels))
-    num_classes = len(out_masks) - (1 if 'weight_mask' in out_masks else 0)
 
     if args.model == 'fc-densenet':
         fcdensenet = FCDenseNet(growth_rate=args.fcdensenet_growth_rate) if args.fcdensenet_num_channels == 0 else \
             FCDenseNet(num_channels=[args.fcdensenet_num_channels]*6, growth_rate=args.fcdensenet_growth_rate)
         output = fcdensenet.compute_output(inputs, num_classes)
+    elif args.model == 'unet_resnext':
+        output = unet_resnext(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
+                              depth_is_50=not args.resnext50)
     elif args.model == 'unet_mobilenet':
         output = unet_mobilenetv2(inputs, num_classes, shape=(input_size, input_size, args.nbr_channels),
                                   mobilenet_upsampling=True)
@@ -107,12 +126,7 @@ if __name__ == "__main__":
     else:
         raise ValueError("invalid optimizer")
 
-    if "weight_mask" in out_masks:
-        model.compile(optimizer=optimizer, loss=bce_dice_loss_unet, metrics=[i_o_u_metric_unet])
-        tensorboard_labels = tensorboard_labels[:, :, :, :-1]
-    else:
-        model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=[i_o_u_metric])
-
+    model.compile(optimizer=optimizer, loss=bce_dice_loss, metrics=metrics)
     model.fit_generator(train_gen, epochs=args.num_epochs, verbose=2, validation_data=val_gen, callbacks=[
         TensorBoard(log_dir=log_dir, write_graph=False),
         TensorBoardPredictedImages(imgs=tensorboard_imgs, labels=tensorboard_labels,
