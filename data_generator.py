@@ -85,7 +85,7 @@ class DataGenerator(Sequence):
                                           OneOf([small_color_augm, medium_color_augm, huge_color_augm], p=.8),
                                           OneOf([Blur(p=.3), GaussNoise(p=.3), MotionBlur(p=.3)], p=.5),
                                           OneOf([RGBShift(p=.5), ToGray(p=.5)], p=.3)
-                                          ])  # TODO: add nuclei to cells to improve cell separation, use transforms.Lambda
+                                          ])
         else:
             self.preprocessing = get_5_crops_gen(self.resolution)
 
@@ -238,7 +238,6 @@ def visualize(image, mask, original_image=None, original_mask=None):
 
 
 # Some tests
-# TODO: make more tests?
 def test_data_generator(data_dir="data/stage1_train"):
 
     data_generator = DataGenerator(data_directories=(data_dir,), output_masks=('border_mask', 'union_mask'))

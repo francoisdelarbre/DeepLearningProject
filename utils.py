@@ -94,7 +94,6 @@ def get_full_resolution(cropped_images, coordonates, original_resolution, round=
     if cropped_image_weight is None:
         cropped_image_ones = np.ones(cropped_image_shape[:2], dtype=FLOAT_TYPE)
     
-    # TODO: We could give a lower weight to pixels that are close to the borders
     cropped_image_weight = np.ones(cropped_image_shape, dtype=FLOAT_TYPE)
     
     if len(cropped_image_weight.shape) < len(cropped_image_shape):
