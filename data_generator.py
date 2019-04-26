@@ -8,7 +8,22 @@ from albumentations import Compose, RandomSizedCrop, OpticalDistortion, ElasticT
 from pathlib import Path
 import numpy as np
 import cv2
+import albumentations as A
 
+class RandomSizedCropLargerImages(RandomSizedCrop):
+    def apply(self, img, crop_height=0, crop_width=0, h_start=0, w_start=0, pad_value=0., *args, **kwargs):
+        img = pad_if_too_small(img, crop_height, crop_width, pad_value)
+        return super(RandomSizedCropLargerImages, self).apply(img, crop_height, crop_width, h_start, w_start, *args, **kwargs)
+    
+def pad_if_too_small(image, crop_height=0, crop_width=0, pad_value=0.):
+    height, width = image.shape[:2]
+    if height < crop_height or width < crop_width:
+        pad_h = max(crop_height - height, 0)
+        pad_w = max(crop_width - width, 0)
+        image = cv2.copyMakeBorder(image, 0, pad_h, 0,
+                                pad_w, cv2.BORDER_CONSTANT,
+                                value=pad_value)  # if gt label, pad_value should be ignore index.
+    return image
 
 def get_5_crops_gen(resolution):
     """returns a get_5_crops function with the corresponding resolution"""
@@ -19,6 +34,8 @@ def get_5_crops_gen(resolution):
         processed_images = []
         processed_masks = []
         for image, mask in zip(images, masks):
+            image = pad_if_too_small(image, resolution, resolution)
+            mask = pad_if_too_small(mask, resolution, resolution)
             img_size = image.shape
             for crop_idx in [(0, resolution, 0, resolution),
                              (0, resolution, -resolution, img_size[1]),
@@ -74,8 +91,8 @@ class DataGenerator(Sequence):
             medium_color_augm = Compose([CLAHE(p=1), HueSaturationValue(hue_shift_limit=20, sat_shift_limit=50,
                                                                         val_shift_limit=50, p=1)], p=.25)
             huge_color_augm = Compose([ChannelShuffle(p=1)], p=.5)  # ChannelShuffle more likely than the 2 others
-            self.preprocessing = Compose([RandomSizedCrop(min_max_height=(int(resolution*2/3),
-                                                                          min(256, int(resolution*3/2))),
+            self.preprocessing = Compose([RandomSizedCropLargerImages(min_max_height=(int(resolution*2/3),
+                                                                          min(max(256, int(resolution*2/3)), int(resolution*3/2))),
                                                           height=resolution, width=resolution,
                                                           interpolation=cv2.INTER_NEAREST, p=1.0),
                                           OneOf([OpticalDistortion(p=1.0, distort_limit=2, shift_limit=0.5),
@@ -159,6 +176,7 @@ class DataGenerator(Sequence):
 
         # convert to numpy array and rescale
         processed_images = np.array(processed_images)
+        
         processed_masks = np.array(processed_masks)
         processed_images = processed_images.astype(np.float16) / 255.
         processed_masks = processed_masks.astype(np.float16) / 255.
