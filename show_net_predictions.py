@@ -22,6 +22,8 @@ parser.add_argument('--data_dir', default='data/stage1_train', type=str, help='d
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
 parser.add_argument('--out_masks', default='["union_mask", "weight_mask"]', type=str,
                     help='output masks as a json string, weight mask should be the last')
+parser.add_argument('--val_first', action='store_true', help='takes the vlaidation set at the firsts offsets of the '
+                                                             'shuffled array rather than the lasts')
 
 args = parser.parse_args()
 
@@ -33,7 +35,7 @@ if __name__ == '__main__':
     model = load_model(str(Path('h5_files') / f"{args.model_name}.h5"), custom_objects=custom_objects)
     out_masks = json.loads(args.out_masks)
 
-    _, ids_list_val = split_train_val(args.data_dir, args.train_prop)
+    _, ids_list_val = split_train_val(args.data_dir, args.train_prop, not args.val_first)
 
     val_gen = DataGenerator((args.data_dir,), output_masks=out_masks, batch_size=1,
                             resolution=args.input_size, performs_data_augmentation=False, ids_list=(ids_list_val,))

@@ -33,6 +33,9 @@ parser.add_argument('--sec_data_dir', default='data/extra_data', type=str,
                          '"" if only the main dataset is to be used')
 parser.add_argument('--batch_size', default=8, type=int, help='size of a batch')
 parser.add_argument('--train_prop', default=.9, type=float, help='proportion of training set w.r.t. complete dataset')
+parser.add_argument('--val_first', action='store_true', help='takes the vlaidation set at the firsts offsets of the '
+                                                             'shuffled array rather than the lasts')
+
 parser.add_argument('--out_masks', default='["union_mask"]', type=str,
                     help='output masks as a json string, weight mask should be the last if it is present')
 
@@ -61,7 +64,7 @@ if __name__ == "__main__":
     log_dir = Path("tf_logs") / (datetime.now().strftime("%Y.%m.%d-%H.%M") if args.save_file == 'model'
                                  else args.save_file)
 
-    ids_list_train, ids_list_val = split_train_val(args.main_data_dir, args.train_prop)
+    ids_list_train, ids_list_val = split_train_val(args.main_data_dir, args.train_prop, not args.val_first)
 
     if args.sec_data_dir == '':
         data_dirs = (args.main_data_dir,)
