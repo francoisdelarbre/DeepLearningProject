@@ -29,6 +29,15 @@ def get_run_length_enc(array):
 
     return run_length
 
+def from_run_kength_enc(run_length, shape):
+    reversed_shape = (shape[1], shape[0])
+    image_array = np.zeros(shape[0]*shape[1], dtype=np.float32)
+    for one_index, length in zip(run_length[::2], run_length[1::2]):
+        start = one_index - 1
+        image_array[start:start + length] = 1.
+    
+    return image_array.reshape(reversed_shape).transpose()
+        
 
 def split_train_val(data_dir, train_prop, val_last=True):
     """splits the data into training and validation sets
@@ -219,3 +228,22 @@ def test_crop_image():
         
         
         print("number of errors: {}".format(np.sum(diff>1e-7)))
+
+def test_run_length_enc_dec():
+    np.random.seed(17)
+    mask = np.round(np.random.random(100).reshape((10,10)))
+    print(mask)
+    run_length = get_run_length_enc(mask)
+    print(run_length)
+    rebuilded_mask = from_run_kength_enc(run_length, (10, 10))
+    
+    diff = mask - rebuilded_mask
+    number_of_errors = np.sum(diff > 1e-7)
+    
+    if number_of_errors :
+        print("failed : there was {} errors".format(number_of_errors))
+    else:
+        print("succes: {} error found".format(number_of_errors))
+
+if __name__ =="__main__":
+    test_run_length_enc_dec()
