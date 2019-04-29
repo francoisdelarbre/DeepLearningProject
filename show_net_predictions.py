@@ -9,7 +9,8 @@ from pathlib import Path
 import numpy as np
 
 from keras.models import load_model
-from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet
+from loss import bce_dice_loss, i_o_u_metric, bce_dice_loss_unet, i_o_u_metric_unet, i_o_u_metric_first_mask, \
+    i_o_u_metric_second_mask
 from data_generator import DataGenerator
 
 
@@ -29,7 +30,9 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     custom_objects = {"bce_dice_loss": bce_dice_loss, "bce_dice_loss_unet": bce_dice_loss_unet,
-                      "i_o_u_metric": i_o_u_metric, "i_o_u_metric_unet": i_o_u_metric_unet}  # so that
+                      "i_o_u_metric": i_o_u_metric, "i_o_u_metric_unet": i_o_u_metric_unet,
+                      "i_o_u_metric_first_mask": i_o_u_metric_first_mask,
+                      "i_o_u_metric_second_mask": i_o_u_metric_second_mask}  # so that
     # keras do not crash :/ https://github.com/keras-team/keras/issues/5916
 
     model = load_model(str(Path('h5_files') / f"{args.model_name}.h5"), custom_objects=custom_objects)
@@ -43,7 +46,10 @@ if __name__ == '__main__':
     print("several images will be predicted, press 'ctrl-c' to quit or 'n' to show next image")
     print("shows into the order: [in_img, pred_mask_1, pred_mask_2, ...], ")
 
-    for img, mask in val_gen:
+    random.seed(17)  # for reproductibility
+
+    for i, (img, mask) in enumerate(val_gen):
+        print(ids_list_val[i])
 
         crop_offset = random.randint(0, img.shape[0] - 1)  # take one of the crops at random
         img = img[crop_offset:crop_offset + 1, :, :, :]
@@ -51,17 +57,20 @@ if __name__ == '__main__':
         pred_mask = model.predict(img)
 
         line = [img[0, :, :, :]]
-        for i in range(mask.shape[2]):
+        for j in range(mask.shape[2]):
             # turn 2 grayscale images to one rgb
-            pred_and_label_masks = np.zeros((mask.shape[0], mask.shape[1], 3))
-            pred_and_label_masks[:, :, 0] = (pred_mask[0, :, :, i] > 0.5)
-            pred_and_label_masks[:, :, 2] = mask[:, :, i]
-            line.append(pred_and_label_masks)
+            if out_masks[j] != "weight_mask":
+                pred_and_label_masks = np.zeros((mask.shape[0], mask.shape[1], 3))
+                pred_and_label_masks[:, :, 0] = mask[:, :, j]
+                pred_and_label_masks[:, :, 2] = (pred_mask[0, :, :, j] > 0.5)
+                line.append(pred_and_label_masks)
+            else:
+                line.append(np.stack([mask[:, :, j]] * 3, axis=-1))
 
         img_to_plot = (np.hstack(line) * 255).astype(np.uint8)
 
-        rescaling_factor = 1024 / max(img_to_plot.shape[0], img_to_plot.shape[1])
-        img_to_plot = cv2.resize(img_to_plot, None, fx=rescaling_factor, fy=rescaling_factor)
+        # rescaling_factor = 1024 / max(img_to_plot.shape[0], img_to_plot.shape[1])
+        # img_to_plot = cv2.resize(img_to_plot, None, fx=rescaling_factor, fy=rescaling_factor)
 
         cv2.imshow('img and predicted masks', img_to_plot)
         cv2.waitKey()
