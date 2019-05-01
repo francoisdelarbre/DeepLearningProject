@@ -95,7 +95,7 @@ def block(x, filters, kernel_size=3, up_stride=1, groups=32, conv_shortcut=True,
             shortcut = layers.Conv2D((64 // groups) * filters, 1, use_bias=False, name=name + '_0_conv')(x)
         else:
             shortcut = layers.Conv2DTranspose((64 // groups) * filters, 1, strides=up_stride, use_bias=False,
-                                     name=name + '_0_conv')(x)
+                                              name=name + '_0_conv')(x)
         shortcut = layers.BatchNormalization(axis=bn_axis, epsilon=1.001e-5, name=name + '_0_bn')(shortcut)
     else:
         shortcut = x
@@ -126,4 +126,3 @@ def block(x, filters, kernel_size=3, up_stride=1, groups=32, conv_shortcut=True,
     x = layers.Add(name=name + '_add')([shortcut, x])
     x = layers.Activation('relu', name=name + '_out')(x)
     return x
-

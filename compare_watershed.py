@@ -33,7 +33,7 @@ def separate_mask(union_mask, ret):
     return mask_list
 
 
-def IOU(mask1, mask2):
+def iou(mask1, mask2):
     """compute the IOU of two masks
             :param mask1: a uint8 binary mask
             :param mask2: a uint8 binary mask
@@ -49,7 +49,7 @@ def IOU(mask1, mask2):
 
 def main():
     # load ids of validations images
-    val_set = pickle.load(open('val_data_True.pickle', 'rb'))
+    val_set = split_train_val(PATH, 0.9, False)
 
     mean_score = 0
     tresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
@@ -68,7 +68,9 @@ def main():
         # result = watershed_transform(union_mask)
         # result = watershed_transform(union_w_mask)
         # result = watershed_transform_border(union_mask, border_mask)
-        result = watershed_transform_center(union_mask, center_mask)
+        # result = watershed_transform_center(union_mask, center_mask)
+        # result = watershed_transform_border(union_w_mask, border_mask)
+        result = watershed_transform_center(union_w_mask, center_mask)
 
         # assign a label/nuclei
         ret, result = cv2.connectedComponents(result, connectivity=4)
@@ -85,35 +87,33 @@ def main():
                          ground_truth_list]
 
         # IOU matrix
-        IOU_matrix = np.zeros((len(predictions), len(ground_truths)))
+        iou_matrix = np.zeros((len(predictions), len(ground_truths)))
 
-        for i in range(IOU_matrix.shape[0]):
-            for j in range(IOU_matrix.shape[1]):
+        for i in range(iou_matrix.shape[0]):
+            for j in range(iou_matrix.shape[1]):
                 # fill the IOU matrix
-                IOU_matrix[i][j] = IOU(predictions[i], ground_truths[j])
+                iou_matrix[i][j] = iou(predictions[i], ground_truths[j])
 
         score_img = 0
         for tresh in tresholds:
-            hit_matrix = np.array((IOU_matrix > tresh))
+            hit_matrix = np.array((iou_matrix > tresh))
 
             # nb of prediction that matches a ground truth
-            TP = np.sum(hit_matrix)
+            true_positives = np.sum(hit_matrix)
 
-            FP = 0
+            false_positives = 0
             # number of prediction that have no match with a ground truth
             for i in range(len(predictions)):
                 if np.sum(hit_matrix[i, :]) == 0:
-                    FP += 1
+                    false_positives += 1
 
-            FN = 0
+            false_negatives = 0
             # number of ground truth that have no match with a prediction
             for j in range(len(ground_truths)):
                 if np.sum(hit_matrix[:, j]) == 0:
-                    FN += 1
+                    false_negatives += 1
 
-            # print("TP", TP, "FP", FP, "FN", FN)
-            score_tresh = TP / (TP + FP + FN)
-            # print("score tresh", score_tresh)
+            score_tresh = true_positives / (true_positives + false_positives + false_negatives)
             score_img += 1 / len(tresholds) * score_tresh
 
         print(score_img)

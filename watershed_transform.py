@@ -4,8 +4,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import random
 
-# PATH = 'data/extra_data/TCGA-18-5592-01Z-00-DX1/processed_masks/'
 PATH = 'data/stage1_train/4a424e0cb845cf6fd4d9fe62875552c7b89a4e0276cf16ebf46babe4656a794e/processed_masks/'
+
 
 def watershed_transform(union_mask):
     """Wattershed on union mask. use distance map to find markers
@@ -15,7 +15,6 @@ def watershed_transform(union_mask):
     # compute distance map of mask
     tmps = union_mask.copy()
     dist_transform = cv2.distanceTransform(tmps, cv2.DIST_L2, 5)
-
 
     # find big blop in the images, we try to separate each blop with watershed
     tmps = np.uint8(tmps)
@@ -33,11 +32,11 @@ def watershed_transform(union_mask):
         dist_copy[blops != i] = 0
 
         # max distance within blob
-        maxValue = np.max(dist_copy)
+        max_value = np.max(dist_copy)
 
         # keep as marker the pixel with sufficient distance
-        dist_copy[dist_copy <= 0.7*maxValue] = 0
-        dist_copy[dist_copy > 0.7 * maxValue] = 255
+        dist_copy[dist_copy <= 0.7*max_value] = 0
+        dist_copy[dist_copy > 0.7 * max_value] = 255
 
         # add marker to markers map
         sure_fg += dist_copy
@@ -77,7 +76,7 @@ def watershed_transform_border(union_mask, border_mask):
     # find big blop in the images, we try to separate each blop with wattershed
     tmps = np.uint8(tmps)
     ret, blops = cv2.connectedComponents(tmps)
-    blops += 1 # background is 1, 0 will be for the zone to flood by wattershed
+    blops += 1  # background is 1, 0 will be for the zone to flood by wattershed
 
     # matrix of the sure foreground, it will serve as marker
     sure_fg = cv2.subtract(dist_transform, dist_transform)
@@ -90,15 +89,14 @@ def watershed_transform_border(union_mask, border_mask):
         dist_copy[blops != i] = 0
 
         # max distance within blob
-        maxValue = np.max(dist_copy)
+        max_value = np.max(dist_copy)
 
         # keep as marker the pixel with sufficient distance
-        dist_copy[dist_copy <= 0.7*maxValue] = 0
-        dist_copy[dist_copy > 0.7 * maxValue] = 255
+        dist_copy[dist_copy <= 0.7*max_value] = 0
+        dist_copy[dist_copy > 0.7 * max_value] = 255
 
         # add marker to markers map
         sure_fg += dist_copy
-
 
     # put different labels to the markers
     sure_fg = np.uint8(sure_fg)
@@ -126,11 +124,9 @@ def watershed_transform_center(union_mask, center_mask):
         :return the result of watershed_transform"""
 
     # compute distance map of mask
-    tmps = union_mask.copy()
-    center_mask = np.bitwise_and(center_mask, union_mask) #put center that are in nackground to 0
+    center_mask = np.bitwise_and(center_mask, union_mask)  # put center that are in nackground to 0
     sure_fg = center_mask
     not_sure = cv2.subtract(union_mask, sure_fg)
-
 
     # find big blop in the images, we try to separate each blop with wattershed
     sure_fg = np.uint8(sure_fg)
@@ -162,5 +158,3 @@ if __name__ == "__main__":
     watershed_transform(gray_mask.copy())
     watershed_transform_border(gray_mask.copy(), borders.copy())
     watershed_transform_center(gray_mask.copy(), centers.copy())
-
-

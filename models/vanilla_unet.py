@@ -43,4 +43,3 @@ def conv_block(num_channels, starts_with_batchnorm=True, ends_with_batchnorm=Tru
             x = BatchNormalization()(x)
         return x
     return block_fct
-
