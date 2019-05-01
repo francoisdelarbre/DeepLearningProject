@@ -58,9 +58,13 @@ def split_train_val(data_dir, train_prop, val_last=True):
 
 
 def get_resized_images(image, output_resolution=(128, 128), overlapping=(10, 10), default_value=0.0):
-    """given a 2D float32 image of 0's and 1's, returns
-    - a list of the cropped images 
-    - a list the coordonate of the upper left corner in the  original image (from the upper left corner) of the
+    """given a 2D float image, return cropped images from the input image
+    :param image: image coded in float between 0 and 1
+    :param output_resolution: tuple of int, the resolution of the output images (the two first dimensions)
+    :param overlapping: tuple of int, how much pixel cropped images overlap each other
+    :param default_value: default value if padding
+    :return a list of the cropped images and a list the coordonate of the upper left corner in the  original image (
+    from the upper left corner) of the
     coresponding cropped image in the first list"""
     image_shape = tuple(int(dim) for dim in image.shape)
     output_resolution = tuple(int(dim) for dim in output_resolution)
@@ -117,6 +121,14 @@ def get_resized_images(image, output_resolution=(128, 128), overlapping=(10, 10)
 
 
 def get_full_resolution(cropped_images, coordinates, original_resolution, round=False, cropped_image_weight=None):
+    """Compute the full resolution image from list of cropped image and the coordinates of their upper left corner
+    :param cropped_images: list of cropped images
+    :param coordinates: list of the coordinates  of the upper left corners of the cropped images
+    :param original_resolution: resolution of the original image that has to be reconstructed
+    :param round: if the output has to be round
+    :param cropped_image_weight: optional weight of the pixel of the cropped images
+    :return:
+    """
     cropped_image_shape = cropped_images[0].shape
     image = np.zeros((*original_resolution, *cropped_image_shape[2:]), dtype=FLOAT_TYPE)
     image_load = np.zeros(original_resolution, dtype=FLOAT_TYPE)
