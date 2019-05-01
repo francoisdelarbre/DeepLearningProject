@@ -2,19 +2,19 @@ import cv2
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+import random
 
-PATH = 'data/extra_data/TCGA-18-5592-01Z-00-DX1/processed_masks/'
-
+# PATH = 'data/extra_data/TCGA-18-5592-01Z-00-DX1/processed_masks/'
+PATH = 'data/stage1_train/4a424e0cb845cf6fd4d9fe62875552c7b89a4e0276cf16ebf46babe4656a794e/processed_masks/'
 
 def watershed_transform(union_mask):
     """Wattershed on union mask. use distance map to find markers
         :param union_mask, a uint8 mask"""
-    plt.figure()
-    plt.imshow(union_mask)
 
     # compute distance map of mask
     tmps = union_mask.copy()
     dist_transform = cv2.distanceTransform(tmps, cv2.DIST_L2, 5)
+
 
     # find big blop in the images, we try to separate each blop with watershed
     tmps = np.uint8(tmps)
@@ -56,8 +56,26 @@ def watershed_transform(union_mask):
 
     # remove borders from cells
     union_mask[result == -1] = 0
-    cv2.imshow('resutl', union_mask)
-    cv2.waitKey(0)
+
+    ret, labels = cv2.connectedComponents(union_mask, connectivity=4)
+    label_hue = np.uint8(179 * labels / np.max(labels))
+    for i in range(1, ret):
+        label_hue[labels==i] = random.randint(1, 254)
+
+    # Map component labels to hue val
+    # label_hue = np.uint8(179 * labels / np.max(labels))
+    blank_ch = 255 * np.ones_like(label_hue)
+    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+
+    # cvt to BGR for display
+    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+
+    # set bg label to black
+    labeled_img[label_hue == 0] = 0
+
+    # plt.imshow(labeled_img)
+    # plt.show()
+
     return union_mask
 
 
@@ -69,10 +87,9 @@ def watershed_transform_border(union_mask, border_mask):
     # compute distance map of mask
     tmps = union_mask.copy()
     tmps = cv2.subtract(tmps, border_mask)
-    dist_transform = cv2.distanceTransform(tmps, cv2.DIST_L2, 5)
+    tmps[tmps < 0] = 0
 
-    cv2.imshow('tmps', tmps)
-    cv2.waitKey(0)
+    dist_transform = cv2.distanceTransform(tmps, cv2.DIST_L2, 5)
 
     # find big blop in the images, we try to separate each blop with wattershed
     tmps = np.uint8(tmps)
@@ -116,9 +133,6 @@ def watershed_transform_border(union_mask, border_mask):
     # remove borders from cells
     union_mask[result == -1] = 0
 
-    cv2.imshow('result', union_mask)
-    cv2.waitKey(0)
-
     return union_mask
 
 
@@ -129,14 +143,10 @@ def watershed_transform_center(union_mask, center_mask):
 
     # compute distance map of mask
     tmps = union_mask.copy()
+    center_mask = np.bitwise_and(center_mask, union_mask) #put center that are in nackground to 0
     sure_fg = center_mask
     not_sure = cv2.subtract(union_mask, sure_fg)
 
-    cv2.imshow('tmps', tmps)
-    cv2.waitKey(0)
-
-    cv2.imshow('sure', sure_fg)
-    cv2.waitKey(0)
 
     # find big blop in the images, we try to separate each blop with wattershed
     sure_fg = np.uint8(sure_fg)
@@ -151,9 +161,6 @@ def watershed_transform_center(union_mask, center_mask):
     # remove borders from cells
     union_mask[result == -1] = 0
 
-    cv2.imshow('result', union_mask)
-    cv2.waitKey(0)
-
     return union_mask
 
 
@@ -161,14 +168,15 @@ if __name__ == "__main__":
     mask = cv2.imread(PATH+'union_mask.png')
     gray_mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
 
-    print(np.unique(gray_mask))
+    plt.imshow(gray_mask)
+    plt.show()
     borders = cv2.imread(PATH+'border_mask.png')
     borders = cv2.cvtColor(borders, cv2.COLOR_BGR2GRAY)
 
     centers = cv2.imread(PATH+'center_mask.png')
     centers = cv2.cvtColor(centers, cv2.COLOR_BGR2GRAY)
-    # watershed_transform(gray_mask.copy())
-    # watershed_transform_border(gray_mask.copy(), borders.copy())
+    watershed_transform(gray_mask.copy())
+    watershed_transform_border(gray_mask.copy(), borders.copy())
     watershed_transform_center(gray_mask.copy(), centers.copy())
 
 
