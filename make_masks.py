@@ -62,6 +62,6 @@ if __name__ == "__main__":
         border_mask = np.uint8(border_mask) * 255
         weight_mask = np.uint8(weight_mask) * 255
         cv2.imwrite(str(dir_name / 'union_mask.png'), union_mask)
-        #cv2.imwrite(str(dir_name / 'border_mask.png'), border_mask)
-        #cv2.imwrite(str(dir_name / 'weight_mask.png'), weight_mask)
+        cv2.imwrite(str(dir_name / 'border_mask.png'), border_mask)
+        cv2.imwrite(str(dir_name / 'weight_mask.png'), weight_mask)
         cv2.imwrite(str(dir_name / 'center_mask.png'), center_mask)

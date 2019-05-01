@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from pathlib import Path
 from loss import dice_loss, bce_dice_loss, i_o_u_metric
-from utils import get_run_length_enc, get_full_resolution, get_resized_images
+from utils import get_run_length_enc, predict_image
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
@@ -10,15 +10,12 @@ import csv
 from datetime import datetime
 
 # some versions of keras cannot load a model with custom losses. see https://github.com/keras-team/keras/issues/5916
-custom_losses = {
-    "dice_loss": dice_loss,
-    "bce_dice_loss" : bce_dice_loss,
-    "i_o_u_metric" : i_o_u_metric
-}
+custom_losses = {"bce_dice_loss": bce_dice_loss, "bce_dice_loss_unet": bce_dice_loss_unet,
+                 "i_o_u_metric": i_o_u_metric, "i_o_u_metric_unet": i_o_u_metric_unet,
+                 "i_o_u_metric_first_mask": i_o_u_metric_first_mask,
+                 "i_o_u_metric_second_mask": i_o_u_metric_second_mask}
 
-# keras.losses.dice_loss = dice_loss
-# keras.losses.bce_dice_loss = bce_dice_loss
-# keras.losses.i_o_u_metric = i_o_u_metric
+
 def make_submission_file(model=None, model_dir=None, model_name="model.h5", images_dir="data/stage2_test_final"):
     log_dir_path = Path("tf_logs")
     images_dir = Path(images_dir)
@@ -72,17 +69,3 @@ def make_submission_file(model=None, model_dir=None, model_name="model.h5", imag
                 csv_writer.writerow([image_id, ""])
                 
     return model
-def predict_image(model, image):
-    images, cooredonates = get_resized_images(image, model.output.shape[1:3])
-    images_array = np.array(images)
-    
-    predictions = model.predict(images_array)
-    
-    predictions_list = np.split(predictions, predictions.shape[0], axis=0)
-    
-    for i, prediction in enumerate(predictions_list):
-        predictions_list[i] = prediction.squeeze()
-
-    prediction_full = get_full_resolution(predictions_list, cooredonates, image.shape[:2], round=True)
-    
-    return prediction_full

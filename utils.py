@@ -159,6 +159,31 @@ def get_full_resolution(cropped_images, coordonates, original_resolution, round=
     
     return image
 
+
+def predict_image(model, image, last_layer_res=None):
+    """
+    predicts the mask of the image by calling several times the model (model input res < image res)
+    :param model: the model to perform predictions
+    :param image: the image we want to segment sementically
+    :param last_layer_res: if not None, the resolution of the output of the model, otherwise model.output.shape will
+    be used
+    :return: the full predicted image
+    """
+    out_res = model.output.shape[1:3] if last_layer_res is None else [last_layer_res, last_layer_res]
+    images, coordinates = get_resized_images(image, out_res)
+    images_array = np.array(images)
+
+    predictions = model.predict(images_array)
+
+    predictions_list = np.split(predictions, predictions.shape[0], axis=0)
+
+    for i, prediction in enumerate(predictions_list):
+        predictions_list[i] = prediction.squeeze()
+
+    prediction_full = get_full_resolution(predictions_list, coordinates, image.shape[:2], round=True)
+
+    return prediction_full
+
 def test_crop_image():
     image = np.random.rand(100).reshape((10, 10))      
     cropped_images, coordonates = get_resized_images(image, (13, 13), (1, 1))
