@@ -9,7 +9,8 @@ PATH = 'data/stage1_train/4a424e0cb845cf6fd4d9fe62875552c7b89a4e0276cf16ebf46bab
 
 def watershed_transform(union_mask):
     """Wattershed on union mask. use distance map to find markers
-        :param union_mask, a uint8 mask"""
+        :param union_mask, a uint8 mask
+        :return the result of watershed_transform"""
 
     # compute distance map of mask
     tmps = union_mask.copy()
@@ -57,32 +58,14 @@ def watershed_transform(union_mask):
     # remove borders from cells
     union_mask[result == -1] = 0
 
-    ret, labels = cv2.connectedComponents(union_mask, connectivity=4)
-    label_hue = np.uint8(179 * labels / np.max(labels))
-    for i in range(1, ret):
-        label_hue[labels==i] = random.randint(1, 254)
-
-    # Map component labels to hue val
-    # label_hue = np.uint8(179 * labels / np.max(labels))
-    blank_ch = 255 * np.ones_like(label_hue)
-    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
-
-    # cvt to BGR for display
-    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-
-    # set bg label to black
-    labeled_img[label_hue == 0] = 0
-
-    # plt.imshow(labeled_img)
-    # plt.show()
-
     return union_mask
 
 
 def watershed_transform_border(union_mask, border_mask):
-    """Wattershed on union mask. use distance map to find markers
+    """Wattershed on union mask. use distance map and border_mask to find markers
         :param union_mask, a uint8 mask
-        :param border_mask, a uint8 mask"""
+        :param border_mask, a uint8 mask
+        :return the result of watershed_transform"""
 
     # compute distance map of mask
     tmps = union_mask.copy()
@@ -139,7 +122,8 @@ def watershed_transform_border(union_mask, border_mask):
 def watershed_transform_center(union_mask, center_mask):
     """Wattershed on union mask. use distance map to find markers
         :param union_mask, a uint8 mask
-        :param border_mask, a uint8 mask"""
+        :param center_mask, a uint8 mask
+        :return the result of watershed_transform"""
 
     # compute distance map of mask
     tmps = union_mask.copy()
