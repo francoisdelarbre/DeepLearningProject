@@ -95,21 +95,22 @@ class DataGenerator(Sequence):
                                                                         val_shift_limit=50, p=1)], p=.25)
             huge_color_augm = Compose([ChannelShuffle(p=1)], p=.5)  # ChannelShuffle more likely than the 2 others
             self.preprocessing = Compose([RandomSizedCropLargerImages(
-                min_max_height=(int(resolution*2/3), min(max(256, int(resolution*2/3)), int(resolution*3/2))),
+                min_max_height=(
+                    int(resolution * 2 / 3), min(max(256, int(resolution * 2 / 3)), int(resolution * 3 / 2))),
                 height=resolution, width=resolution, interpolation=cv2.INTER_NEAREST, p=1.0),
-                                          OneOf([OpticalDistortion(p=1.0, distort_limit=2, shift_limit=0.5),
-                                                 GridDistortion(p=.5), ElasticTransform(
-                                                  p=1.0, alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03)], p=.5),
-                                          RandomRotate90(p=.5), VerticalFlip(p=.5),
-                                          OneOf([small_color_augm, medium_color_augm, huge_color_augm], p=.8),
-                                          OneOf([Blur(p=.3), GaussNoise(p=.3), MotionBlur(p=.3)], p=.5),
-                                          OneOf([RGBShift(p=.5), ToGray(p=.5)], p=.3)
-                                          ])
+                OneOf([OpticalDistortion(p=1.0, distort_limit=2, shift_limit=0.5),
+                       GridDistortion(p=.5), ElasticTransform(
+                        p=1.0, alpha=120, sigma=120 * 0.05, alpha_affine=120 * 0.03)], p=.5),
+                RandomRotate90(p=.5), VerticalFlip(p=.5),
+                OneOf([small_color_augm, medium_color_augm, huge_color_augm], p=.8),
+                OneOf([Blur(p=.3), GaussNoise(p=.3), MotionBlur(p=.3)], p=.5),
+                OneOf([RGBShift(p=.5), ToGray(p=.5)], p=.3)
+            ])
         else:
             self.preprocessing = get_5_crops_gen(self.resolution)
 
         main_ids_list = ids_list[0] if ids_list[0] is not None else \
-            [directory.name for directory in self.data_directory.iterdir() if directory.is_dir()]
+            [directory.name for directory in self.main_data_directory.iterdir() if directory.is_dir()]
 
         if self.secondary_data_directoy is None:
             secondary_ids_list = []
@@ -135,7 +136,7 @@ class DataGenerator(Sequence):
 
     def __getitem__(self, item):
         """ return a batch """
-        indexes = self.indexes[item*self.batch_size:(item+1)*self.batch_size]
+        indexes = self.indexes[item * self.batch_size:(item + 1) * self.batch_size]
 
         ids_list_subset = self.ids_list[indexes]
 
@@ -178,7 +179,7 @@ class DataGenerator(Sequence):
 
         # convert to numpy array and rescale
         processed_images = np.array(processed_images)
-        
+
         processed_masks = np.array(processed_masks)
         processed_images = processed_images.astype(np.float16) / 255.
         processed_masks = processed_masks.astype(np.float16) / 255.
@@ -259,7 +260,6 @@ def visualize(image, mask, original_image=None, original_mask=None):
 
 # Some tests
 def test_data_generator(data_dir="data/stage1_train"):
-
     data_generator = DataGenerator(data_directories=(data_dir,), output_masks=('border_mask', 'union_mask'))
 
     x, y = data_generator[0]
